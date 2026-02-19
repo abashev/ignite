@@ -17,6 +17,8 @@
 
 package org.apache.ignite.internal.managers.discovery;
 
+import org.apache.ignite.internal.processors.cache.CacheStatisticsClearMessage;
+import org.apache.ignite.internal.processors.cache.CacheStatisticsClearMessageSerializer;
 import org.apache.ignite.internal.managers.communication.ErrorMessage;
 import org.apache.ignite.internal.managers.communication.ErrorMessageMarshallableSerializer;
 import org.apache.ignite.internal.processors.authentication.User;
