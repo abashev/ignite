@@ -20,30 +20,47 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.marshaller.Marshallers;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Dummy discovery message which is not really sent via ring, it is just added in local discovery worker queue.
  */
 public class ClientCacheChangeDummyDiscoveryMessage extends AbstractCachePartitionExchangeWorkerTask
-    implements DiscoveryCustomMessage {
+    implements DiscoveryCustomMessage, Message {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
-    private final UUID reqId;
+    @Order(0)
+    UUID reqId;
 
     /** */
-    private final Map<String, DynamicCacheChangeRequest> startReqs;
+    Map<String, DynamicCacheChangeRequest> startReqs;
+
+    /** */
+    @Order(value = 1, method = "startRequestsBytes")
+    byte[] startRequestsBytes;
 
     /** */
     @GridToStringInclude
-    private final Set<String> cachesToClose;
+    @Order(2)
+    Set<String> cachesToClose;
+
+    /** */
+    public ClientCacheChangeDummyDiscoveryMessage() {
+        super(null);
+    }
 
     /**
      * @param secCtx Security context in which current task must be executed.
@@ -83,7 +100,33 @@ public class ClientCacheChangeDummyDiscoveryMessage extends AbstractCachePartiti
      * @return Cache start requests.
      */
     @Nullable Map<String, DynamicCacheChangeRequest> startRequests() {
-        return startReqs;
+        if (startReqs != null)
+            return startReqs;
+
+        try {
+            return (startRequestsBytes != null) ? (startReqs = U.unmarshal(Marshallers.jdk(), startRequestsBytes, null)) : null;
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Failed to unmarshal start requests", e);
+        }
+    }
+
+    /** */
+    byte[] startRequestsBytes() {
+        if (startRequestsBytes != null)
+            return startRequestsBytes;
+
+        try {
+            return (startReqs != null) ? U.marshal(Marshallers.jdk(), startReqs) : null;
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Failed to marshal start requests", e);
+        }
+    }
+
+    /** */
+    void startRequestsBytes(byte[] startRequestsBytes) {
+        this.startRequestsBytes = startRequestsBytes;
     }
 
     /**
@@ -101,6 +144,11 @@ public class ClientCacheChangeDummyDiscoveryMessage extends AbstractCachePartiti
     /** {@inheritDoc} */
     @Nullable @Override public DiscoveryCustomMessage ackMessage() {
         throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public short directType() {
+        return 522;
     }
 
     /** {@inheritDoc} */

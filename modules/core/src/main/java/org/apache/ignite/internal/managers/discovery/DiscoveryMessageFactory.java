@@ -35,6 +35,8 @@ import org.apache.ignite.internal.processors.cache.CacheStatisticsModeChangeMess
 import org.apache.ignite.internal.processors.cache.CacheStatisticsModeChangeMessageSerializer;
 import org.apache.ignite.internal.processors.cache.ClientCacheChangeDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.ClientCacheChangeDiscoveryMessageSerializer;
+import org.apache.ignite.internal.processors.cache.ClientCacheChangeDummyDiscoveryMessage;
+import org.apache.ignite.internal.processors.cache.ClientCacheChangeDummyDiscoveryMessageSerializer;
 import org.apache.ignite.internal.processors.cache.TxTimeoutOnPartitionMapExchangeChangeMessage;
 import org.apache.ignite.internal.processors.cache.TxTimeoutOnPartitionMapExchangeChangeMessageSerializer;
 import org.apache.ignite.internal.processors.cache.WalStateFinishMessage;
@@ -266,6 +268,7 @@ public class DiscoveryMessageFactory implements MessageFactoryProvider {
         factory.register((short)519, MarshallerMappingItem::new, new MarshallerMappingItemSerializer());
         factory.register((short)520, CacheStatisticsClearMessage::new, new CacheStatisticsClearMessageSerializer());
         factory.register((short)521, ChangeGlobalStateMessage::new, new ChangeGlobalStateMessageSerializer());
+        factory.register((short)522, ClientCacheChangeDummyDiscoveryMessage::new, new ClientCacheChangeDummyDiscoveryMessageSerializer());
 
     }
 }
