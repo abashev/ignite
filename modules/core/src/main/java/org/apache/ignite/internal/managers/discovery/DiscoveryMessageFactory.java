@@ -49,6 +49,8 @@ import org.apache.ignite.internal.processors.cache.binary.MetadataUpdateAccepted
 import org.apache.ignite.internal.processors.cache.binary.MetadataUpdateAcceptedMessageSerializer;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessageSerializer;
+import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
+import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessageSerializer;
 import org.apache.ignite.internal.processors.continuous.StopRoutineAckDiscoveryMessage;
 import org.apache.ignite.internal.processors.continuous.StopRoutineAckDiscoveryMessageSerializer;
 import org.apache.ignite.internal.processors.continuous.StopRoutineDiscoveryMessage;
@@ -262,7 +264,8 @@ public class DiscoveryMessageFactory implements MessageFactoryProvider {
         factory.register((short)517, MappingAcceptedMessage::new, new MappingAcceptedMessageSerializer());
         factory.register((short)518, MappingProposedMessage::new, new MappingProposedMessageSerializer());
         factory.register((short)519, MarshallerMappingItem::new, new MarshallerMappingItemSerializer());
-factory.register((short)510, CacheStatisticsClearMessage::new,
-            new CacheStatisticsClearMessageSerializer());
+        factory.register((short)520, CacheStatisticsClearMessage::new, new CacheStatisticsClearMessageSerializer());
+        factory.register((short)521, ChangeGlobalStateMessage::new, new ChangeGlobalStateMessageSerializer());
+
     }
 }
