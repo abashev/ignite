@@ -19,6 +19,9 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.Collection;
 import java.util.Set;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
@@ -28,35 +31,51 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.marshaller.Marshallers.jdk;
 
 /**
  * Cache change batch.
  */
-public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
+public class DynamicCacheChangeBatch implements DiscoveryCustomMessage, Message {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Discovery custom message ID. */
-    private IgniteUuid id = IgniteUuid.randomUuid();
+    @Order(0)
+    IgniteUuid id;
 
     /** Change requests. */
     @GridToStringInclude
-    private Collection<DynamicCacheChangeRequest> reqs;
+    Collection<DynamicCacheChangeRequest> reqs;
+
+    /** JDK Serialized version of reqs. */
+    @Order(value = 1, method = "requestsBytes")
+    byte[] requestsBytes;
 
     /** Cache updates to be executed on exchange. */
-    private transient ExchangeActions exchangeActions;
+    private ExchangeActions exchangeActions;
 
     /** */
-    private boolean startCaches;
+    @Order(2)
+    boolean startCaches;
 
     /** Restarting caches. */
-    private Set<String> restartingCaches;
+    @Order(3)
+    Set<String> restartingCaches;
 
     /** Affinity (cache related) services updates to be processed on services deployment process. */
     @GridToStringExclude
-    @Nullable private transient ServiceDeploymentActions serviceDeploymentActions;
+    @Nullable private ServiceDeploymentActions serviceDeploymentActions;
+
+    /** */
+    public DynamicCacheChangeBatch() {
+        // No-op.
+    }
 
     /**
      * @param reqs Requests.
@@ -64,6 +83,7 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
     public DynamicCacheChangeBatch(Collection<DynamicCacheChangeRequest> reqs) {
         assert !F.isEmpty(reqs) : reqs;
 
+        id = IgniteUuid.randomUuid();
         this.reqs = reqs;
     }
 
@@ -87,7 +107,33 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
      * @return Collection of change requests.
      */
     public Collection<DynamicCacheChangeRequest> requests() {
-        return reqs;
+        if (reqs != null)
+            return reqs;
+
+        try {
+            return (requestsBytes != null) ? (reqs = U.unmarshal(jdk(), requestsBytes, null)) : null;
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Failed to unmarshal cache change requests", e);
+        }
+    }
+
+    /** */
+    byte[] requestsBytes() {
+        if (requestsBytes != null)
+            return requestsBytes;
+
+        try {
+            return (reqs != null) ? U.marshal(jdk(), reqs) : null;
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException("Failed to marshal cache change requests", e);
+        }
+    }
+
+    /** */
+    void requestsBytes(byte[] requestsBytes) {
+        this.requestsBytes = requestsBytes;
     }
 
     /**
@@ -155,6 +201,11 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
      */
     public void startCaches(boolean startCaches) {
         this.startCaches = startCaches;
+    }
+
+    /** {@inheritDoc} */
+    @Override public short directType() {
+        return 510;
     }
 
     /** {@inheritDoc} */
