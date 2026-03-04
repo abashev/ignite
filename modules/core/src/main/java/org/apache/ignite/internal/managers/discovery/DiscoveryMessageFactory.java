@@ -262,6 +262,7 @@ public class DiscoveryMessageFactory implements MessageFactoryProvider {
         factory.register((short)517, MappingAcceptedMessage::new, new MappingAcceptedMessageSerializer());
         factory.register((short)518, MappingProposedMessage::new, new MappingProposedMessageSerializer());
         factory.register((short)519, MarshallerMappingItem::new, new MarshallerMappingItemSerializer());
-
+factory.register((short)510, CacheStatisticsClearMessage::new,
+            new CacheStatisticsClearMessageSerializer());
     }
 }
