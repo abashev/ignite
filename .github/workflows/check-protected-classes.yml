@@ -14,8 +14,8 @@
 # limitations under the License.
 
 name: Check Protected Classes
-on:
-  pull_request:
+
+on: pull_request
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
