@@ -2140,7 +2140,10 @@ public class IgniteConfiguration {
      * {@link LocalDeploymentSpi} will be used.
      *
      * @return Grid deployment SPI implementation or {@code null} to use default implementation.
+     * @deprecated Will be replaced with the
+     * <a href="https://cwiki.apache.org/confluence/display/IGNITE/IEP-144+IgniteClassPath">IgniteClassPath</a> in the next versions.
      */
+    @Deprecated
     public DeploymentSpi getDeploymentSpi() {
         return deploySpi;
     }
@@ -2151,7 +2154,10 @@ public class IgniteConfiguration {
      * @param deploySpi Fully configured instance of {@link DeploymentSpi}.
      * @see IgniteConfiguration#getDeploymentSpi()
      * @return {@code this} for chaining.
+     * @deprecated Will be replaced with the
+     * <a href="https://cwiki.apache.org/confluence/display/IGNITE/IEP-144+IgniteClassPath">IgniteClassPath</a> in the next versions.
      */
+    @Deprecated
     public IgniteConfiguration setDeploymentSpi(DeploymentSpi deploySpi) {
         this.deploySpi = deploySpi;
 
@@ -2484,7 +2490,10 @@ public class IgniteConfiguration {
      *
      * @param deployMode Task classes and resources sharing mode.
      * @return {@code this} for chaining.
+     * @deprecated Will be replaced with the
+     * <a href="https://cwiki.apache.org/confluence/display/IGNITE/IEP-144+IgniteClassPath">IgniteClassPath</a> in the next versions.
      */
+    @Deprecated
     public IgniteConfiguration setDeploymentMode(DeploymentMode deployMode) {
         this.deployMode = deployMode;
 
@@ -2496,7 +2505,10 @@ public class IgniteConfiguration {
      * Refer to {@link DeploymentMode} documentation for more information.
      *
      * @return Deployment mode.
+     * @deprecated Will be replaced with the
+     * <a href="https://cwiki.apache.org/confluence/display/IGNITE/IEP-144+IgniteClassPath">IgniteClassPath</a> in the next versions.
      */
+    @Deprecated
     public DeploymentMode getDeploymentMode() {
         return deployMode;
     }
