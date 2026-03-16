@@ -125,6 +125,14 @@ import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexC
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexCreateOperationMarshallableSerializer;
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexDropOperation;
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexDropOperationSerializer;
+import org.apache.ignite.internal.processors.service.ServiceChangeBatchRequest;
+import org.apache.ignite.internal.processors.service.ServiceChangeBatchRequestSerializer;
+import org.apache.ignite.internal.processors.service.ServiceClusterDeploymentResultBatch;
+import org.apache.ignite.internal.processors.service.ServiceClusterDeploymentResultBatchSerializer;
+import org.apache.ignite.internal.processors.service.ServiceDeploymentRequest;
+import org.apache.ignite.internal.processors.service.ServiceDeploymentRequestMarshallableSerializer;
+import org.apache.ignite.internal.processors.service.ServiceUndeploymentRequest;
+import org.apache.ignite.internal.processors.service.ServiceUndeploymentRequestSerializer;
 import org.apache.ignite.internal.util.distributed.FullMessage;
 import org.apache.ignite.internal.util.distributed.FullMessageSerializer;
 import org.apache.ignite.internal.util.distributed.InitMessage;
@@ -340,7 +348,12 @@ public class DiscoveryMessageFactory implements MessageFactoryProvider {
             new ChangeGlobalStateMessageMarshallableSerializer(marsh, clsLdr));
         factory.register((short)533, ClientCacheChangeDummyDiscoveryMessage::new,
             new ClientCacheChangeDummyDiscoveryMessageMarshallableSerializer(marsh, clsLdr));
-        factory.register((short)534, DynamicCacheChangeBatch::new,
-            new DynamicCacheChangeBatchMarshallableSerializer(marsh, clsLdr));
+        factory.register((short)534, DynamicCacheChangeBatch::new, new DynamicCacheChangeBatchMarshallableSerializer(marsh, clsLdr));
+        factory.register((short)535, ServiceClusterDeploymentResultBatch::new,
+            new ServiceClusterDeploymentResultBatchSerializer());
+        factory.register((short)536, ServiceChangeBatchRequest::new, new ServiceChangeBatchRequestSerializer());
+        factory.register((short)537, ServiceDeploymentRequest::new,
+            new ServiceDeploymentRequestMarshallableSerializer(marsh, clsLdr));
+        factory.register((short)538, ServiceUndeploymentRequest::new, new ServiceUndeploymentRequestSerializer());
     }
 }

@@ -19,20 +19,27 @@ package org.apache.ignite.internal.processors.service;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Service undeployment request.
  */
-public class ServiceUndeploymentRequest extends ServiceChangeAbstractRequest {
+public class ServiceUndeploymentRequest extends ServiceChangeAbstractRequest implements Message {
     /** */
-    private static final long serialVersionUID = 0L;
+    public ServiceUndeploymentRequest() {
+    }
 
     /**
      * @param srvcId Service id.
      */
     public ServiceUndeploymentRequest(@NotNull IgniteUuid srvcId) {
-        super(srvcId);
+        this.srvcId = srvcId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public short directType() {
+        return 538;
     }
 
     /** {@inheritDoc} */

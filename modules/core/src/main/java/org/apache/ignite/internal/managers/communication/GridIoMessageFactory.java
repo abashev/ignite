@@ -331,6 +331,8 @@ import org.apache.ignite.internal.processors.rest.handlers.task.GridTaskResultRe
 import org.apache.ignite.internal.processors.rest.handlers.task.GridTaskResultRequestSerializer;
 import org.apache.ignite.internal.processors.rest.handlers.task.GridTaskResultResponse;
 import org.apache.ignite.internal.processors.rest.handlers.task.GridTaskResultResponseSerializer;
+import org.apache.ignite.internal.processors.service.ServiceClusterDeploymentResult;
+import org.apache.ignite.internal.processors.service.ServiceClusterDeploymentResultSerializer;
 import org.apache.ignite.internal.processors.service.ServiceDeploymentProcessId;
 import org.apache.ignite.internal.processors.service.ServiceDeploymentProcessIdSerializer;
 import org.apache.ignite.internal.processors.service.ServiceSingleNodeDeploymentResult;
@@ -528,6 +530,7 @@ public class GridIoMessageFactory implements MessageFactoryProvider {
         factory.register((short)167, ServiceDeploymentProcessId::new, new ServiceDeploymentProcessIdSerializer());
         factory.register((short)168, ServiceSingleNodeDeploymentResultBatch::new, new ServiceSingleNodeDeploymentResultBatchSerializer());
         factory.register((short)169, ServiceSingleNodeDeploymentResult::new, new ServiceSingleNodeDeploymentResultSerializer());
+        factory.register((short)170, ServiceClusterDeploymentResult::new, new ServiceClusterDeploymentResultSerializer());
         factory.register(GridQueryKillRequest.TYPE_CODE, GridQueryKillRequest::new, new GridQueryKillRequestSerializer());
         factory.register(GridQueryKillResponse.TYPE_CODE, GridQueryKillResponse::new, new GridQueryKillResponseSerializer());
         factory.register(GridIoSecurityAwareMessage.TYPE_CODE, GridIoSecurityAwareMessage::new,
