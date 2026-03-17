@@ -17,8 +17,6 @@
 
 package org.apache.ignite.internal.managers.discovery;
 
-import org.apache.ignite.internal.processors.cache.CacheStatisticsClearMessage;
-import org.apache.ignite.internal.processors.cache.CacheStatisticsClearMessageSerializer;
 import org.apache.ignite.internal.managers.communication.ErrorMessage;
 import org.apache.ignite.internal.managers.communication.ErrorMessageMarshallableSerializer;
 import org.apache.ignite.internal.processors.authentication.User;
@@ -31,14 +29,16 @@ import org.apache.ignite.internal.processors.authentication.UserProposedMessageS
 import org.apache.ignite.internal.processors.authentication.UserSerializer;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessageSerializer;
+import org.apache.ignite.internal.processors.cache.CacheStatisticsClearMessage;
+import org.apache.ignite.internal.processors.cache.CacheStatisticsClearMessageSerializer;
 import org.apache.ignite.internal.processors.cache.CacheStatisticsModeChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheStatisticsModeChangeMessageSerializer;
 import org.apache.ignite.internal.processors.cache.ClientCacheChangeDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.ClientCacheChangeDiscoveryMessageSerializer;
 import org.apache.ignite.internal.processors.cache.ClientCacheChangeDummyDiscoveryMessage;
-import org.apache.ignite.internal.processors.cache.ClientCacheChangeDummyDiscoveryMessageSerializer;
+import org.apache.ignite.internal.processors.cache.ClientCacheChangeDummyDiscoveryMessageMarshallableSerializer;
 import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
-import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatchSerializer;
+import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatchMarshallableSerializer;
 import org.apache.ignite.internal.processors.cache.TxTimeoutOnPartitionMapExchangeChangeMessage;
 import org.apache.ignite.internal.processors.cache.TxTimeoutOnPartitionMapExchangeChangeMessageSerializer;
 import org.apache.ignite.internal.processors.cache.WalStateFinishMessage;
@@ -54,7 +54,7 @@ import org.apache.ignite.internal.processors.cache.binary.MetadataUpdateAccepted
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessageSerializer;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
-import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessageSerializer;
+import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessageMarshallableSerializer;
 import org.apache.ignite.internal.processors.continuous.StopRoutineAckDiscoveryMessage;
 import org.apache.ignite.internal.processors.continuous.StopRoutineAckDiscoveryMessageSerializer;
 import org.apache.ignite.internal.processors.continuous.StopRoutineDiscoveryMessage;
@@ -269,8 +269,11 @@ public class DiscoveryMessageFactory implements MessageFactoryProvider {
         factory.register((short)518, MappingProposedMessage::new, new MappingProposedMessageSerializer());
         factory.register((short)519, MarshallerMappingItem::new, new MarshallerMappingItemSerializer());
         factory.register((short)520, CacheStatisticsClearMessage::new, new CacheStatisticsClearMessageSerializer());
-        factory.register((short)521, ChangeGlobalStateMessage::new, new ChangeGlobalStateMessageSerializer());
-        factory.register((short)522, ClientCacheChangeDummyDiscoveryMessage::new, new ClientCacheChangeDummyDiscoveryMessageSerializer());
-        factory.register((short)523, DynamicCacheChangeBatch::new, new DynamicCacheChangeBatchSerializer());
+        factory.register((short)521, ChangeGlobalStateMessage::new,
+            new ChangeGlobalStateMessageMarshallableSerializer(cstDataMarshall, cstDataMarshallClsLdr));
+        factory.register((short)522, ClientCacheChangeDummyDiscoveryMessage::new,
+            new ClientCacheChangeDummyDiscoveryMessageMarshallableSerializer(cstDataMarshall, cstDataMarshallClsLdr));
+        factory.register((short)523, DynamicCacheChangeBatch::new,
+            new DynamicCacheChangeBatchMarshallableSerializer(cstDataMarshall, cstDataMarshallClsLdr));
     }
 }

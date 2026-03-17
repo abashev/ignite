@@ -20,7 +20,6 @@ package org.apache.ignite.internal.processors.cluster;
 import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
@@ -34,14 +33,14 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.marshaller.Marshallers;
-import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.plugin.extensions.communication.MarshallableMessage;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Message represent request for change cluster global state.
  */
-public class ChangeGlobalStateMessage implements DiscoveryCustomMessage, Message {
+public class ChangeGlobalStateMessage implements DiscoveryCustomMessage, MarshallableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -64,19 +63,15 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage, Message
     /** Configurations read from persistent store. */
     private List<StoredCacheData> storedCfgs;
 
-    /**
-     *  JDK Serialized version of storedCfgs
-     */
-    @Order(value = 4, method = "storedCacheConfigurationsBytes")
+    /** JDK Serialized version of storedCfgs. */
+    @Order(4)
     byte[] storedCfgsBytes;
 
     /** */
     @Nullable private BaselineTopology baselineTopology;
 
-    /**
-     *  JDK Serialized version of baselineTopology
-     */
-    @Order(value = 5, method = "baselineTopologyBytes")
+    /** JDK Serialized version of baselineTopology. */
+    @Order(5)
     byte[] baselineTopologyBytes;
 
     /** */
@@ -136,35 +131,7 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage, Message
      * @return Configurations read from persistent store.
      */
     @Nullable public List<StoredCacheData> storedCacheConfigurations() {
-        if (storedCfgs != null) {
-            return storedCfgs;
-        }
-
-        try {
-            return (storedCfgsBytes != null) ? (storedCfgs = U.unmarshal(Marshallers.jdk(), storedCfgsBytes, null)) : null;
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException("Failed to unmarshal schema operation", e);
-        }
-    }
-
-    /** */
-    byte[] storedCacheConfigurationsBytes() {
-        if (storedCfgsBytes != null) {
-            return storedCfgsBytes;
-        }
-
-        try {
-            return (storedCfgs != null) ? U.marshal(Marshallers.jdk(), storedCfgs) : null;
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException("Failed to marshal schema operation", e);
-        }
-    }
-
-    /** */
-    byte[] storedCacheConfigurationsBytes(byte[] storedCfgsBytes) {
-        return this.storedCfgsBytes = storedCfgsBytes;
+        return storedCfgs;
     }
 
     /**
@@ -250,37 +217,7 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage, Message
      * @return Baseline topology.
      */
     @Nullable public BaselineTopology baselineTopology() {
-        if (baselineTopology != null) {
-            return baselineTopology;
-        }
-
-        try {
-            return (baselineTopologyBytes != null) ?
-                (baselineTopology = U.unmarshal(Marshallers.jdk(), baselineTopologyBytes, null)) :
-                null;
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException("Failed to unmarshal schema operation", e);
-        }
-    }
-
-    /** */
-    byte[] baselineTopologyBytes() {
-        if (baselineTopologyBytes != null) {
-            return baselineTopologyBytes;
-        }
-
-        try {
-            return (baselineTopology != null) ? U.marshal(Marshallers.jdk(), baselineTopology) : null;
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException("Failed to marshal schema operation", e);
-        }
-    }
-
-    /** */
-    void baselineTopologyBytes(byte[] baselineTopologyBytes) {
-        this.baselineTopologyBytes = baselineTopologyBytes;
+        return baselineTopology;
     }
 
     /**
@@ -296,6 +233,24 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage, Message
      */
     public UUID requestId() {
         return reqId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareMarshal(Marshaller marsh) throws IgniteCheckedException {
+        if (storedCfgs != null)
+            storedCfgsBytes = U.marshal(marsh, storedCfgs);
+
+        if (baselineTopology != null)
+            baselineTopologyBytes = U.marshal(marsh, baselineTopology);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void finishUnmarshal(Marshaller marsh, ClassLoader clsLdr) throws IgniteCheckedException {
+        if (storedCfgsBytes != null)
+            storedCfgs = U.unmarshal(marsh, storedCfgsBytes, clsLdr);
+
+        if (baselineTopologyBytes != null)
+            baselineTopology = U.unmarshal(marsh, baselineTopologyBytes, clsLdr);
     }
 
     /** {@inheritDoc} */
