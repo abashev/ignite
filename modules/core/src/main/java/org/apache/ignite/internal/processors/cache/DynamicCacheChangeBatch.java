@@ -189,7 +189,7 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage, Marshall
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return 523;
+        return 534;
     }
 
     /** {@inheritDoc} */

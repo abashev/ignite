@@ -255,7 +255,7 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage, Marshal
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return 521;
+        return 532;
     }
 
     /** {@inheritDoc} */

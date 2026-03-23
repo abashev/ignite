@@ -96,7 +96,7 @@ public class CacheStatisticsClearMessage implements DiscoveryCustomMessage, Mess
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return 510;
+        return 531;
     }
 
     /**

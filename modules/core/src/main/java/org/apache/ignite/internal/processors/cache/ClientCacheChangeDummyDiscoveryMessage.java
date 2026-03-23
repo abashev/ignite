@@ -133,7 +133,7 @@ public class ClientCacheChangeDummyDiscoveryMessage extends AbstractCachePartiti
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return 522;
+        return 533;
     }
 
     /** {@inheritDoc} */
