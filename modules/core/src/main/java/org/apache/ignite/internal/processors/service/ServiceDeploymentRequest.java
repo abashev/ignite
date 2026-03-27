@@ -33,7 +33,7 @@ public class ServiceDeploymentRequest extends ServiceChangeAbstractRequest imple
     /** Service configuration. */
     private LazyServiceConfiguration cfg;
 
-    /** JDK serialization for cfg */
+    /** JDK serialization for {@link #cfg}. */
     @Order(0)
     byte[] cfgBytes;
 
