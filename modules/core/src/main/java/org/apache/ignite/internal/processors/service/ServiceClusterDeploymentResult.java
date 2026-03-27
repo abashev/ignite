@@ -44,7 +44,7 @@ public class ServiceClusterDeploymentResult implements Message {
 
     /**
      * Empty constructor for marshalling purposes.
-     */
+     /** Default constructor for {@link MessageFactory}. */
     public ServiceClusterDeploymentResult() {
     }
 
