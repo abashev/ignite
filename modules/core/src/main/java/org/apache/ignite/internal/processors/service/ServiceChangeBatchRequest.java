@@ -49,7 +49,7 @@ public class ServiceChangeBatchRequest implements DiscoveryCustomMessage, Messag
     @GridToStringExclude
     @Nullable private ServiceDeploymentActions serviceDeploymentActions;
 
-    /** No-op */
+    /** Default constructor for {@link MessageFactory}. */
     public ServiceChangeBatchRequest() {
     }
 
