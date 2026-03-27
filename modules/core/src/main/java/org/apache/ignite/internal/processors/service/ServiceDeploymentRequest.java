@@ -60,13 +60,13 @@ public class ServiceDeploymentRequest extends ServiceChangeAbstractRequest imple
     /** {@inheritDoc} */
     @Override public void prepareMarshal(Marshaller marsh) throws IgniteCheckedException {
         if (cfg != null)
-            configBytes = U.marshal(marsh, cfg);
+            cfgBytes = U.marshal(marsh, cfg);
     }
 
     /** {@inheritDoc} */
     @Override public void finishUnmarshal(Marshaller marsh, ClassLoader clsLdr) throws IgniteCheckedException {
-        if (configBytes != null)
-            cfg = U.unmarshal(marsh, configBytes, clsLdr);
+        if (cfgBytes != null)
+            cfg = U.unmarshal(marsh, cfgBytes, clsLdr);
     }
 
     /** {@inheritDoc} */

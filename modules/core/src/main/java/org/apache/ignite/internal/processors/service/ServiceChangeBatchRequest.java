@@ -33,6 +33,9 @@ import org.jetbrains.annotations.Nullable;
  * Service change batch request discovery message.
  */
 public class ServiceChangeBatchRequest implements DiscoveryCustomMessage, Message {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** Unique custom message ID. */
     @Order(0)
     IgniteUuid id;
