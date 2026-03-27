@@ -35,7 +35,7 @@ public class ServiceDeploymentRequest extends ServiceChangeAbstractRequest imple
 
     /** JDK serialization for cfg */
     @Order(0)
-    byte[] configBytes;
+    byte[] cfgBytes;
 
     /** */
     public ServiceDeploymentRequest() {
