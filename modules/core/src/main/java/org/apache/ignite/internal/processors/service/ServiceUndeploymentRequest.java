@@ -25,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Service undeployment request.
  */
-public class ServiceUndeploymentRequest extends ServiceChangeAbstractRequest implements Message {
+public class ServiceUndeploymentRequest extends ServiceChangeAbstractRequest {
     /** */
     public ServiceUndeploymentRequest() {
     }
