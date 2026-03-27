@@ -25,6 +25,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -42,8 +43,6 @@ public class ServiceClusterDeploymentResult implements Message {
     @GridToStringInclude
     Map<UUID, ServiceSingleNodeDeploymentResult> results;
 
-    /**
-     * Empty constructor for marshalling purposes.
      /** Default constructor for {@link MessageFactory}. */
     public ServiceClusterDeploymentResult() {
     }

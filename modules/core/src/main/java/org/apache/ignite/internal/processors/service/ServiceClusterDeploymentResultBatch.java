@@ -25,6 +25,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,9 +55,7 @@ public class ServiceClusterDeploymentResultBatch implements DiscoveryCustomMessa
     @GridToStringExclude
     @Nullable private ServiceDeploymentActions serviceDeploymentActions;
 
-    /**
-     * Empty constructor for marshalling purposes.
-     */
+    /** Default constructor for {@link MessageFactory}. */
     public ServiceClusterDeploymentResultBatch() {
     }
 

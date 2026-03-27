@@ -24,6 +24,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.extensions.communication.MarshallableMessage;
+import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -37,7 +38,7 @@ public class ServiceDeploymentRequest extends ServiceChangeAbstractRequest imple
     @Order(0)
     byte[] cfgBytes;
 
-    /** */
+    /** Default constructor for {@link MessageFactory}. */
     public ServiceDeploymentRequest() {
     }
 
