@@ -97,7 +97,7 @@ public class ServiceChangeBatchRequest implements DiscoveryCustomMessage, Messag
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return 532;
+        return 536;
     }
 
     /** {@inheritDoc} */
