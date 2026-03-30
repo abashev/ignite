@@ -38,11 +38,6 @@ public class ServiceUndeploymentRequest extends ServiceChangeAbstractRequest {
     }
 
     /** {@inheritDoc} */
-    @Override public short directType() {
-        return 538;
-    }
-
-    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(ServiceUndeploymentRequest.class, this);
     }

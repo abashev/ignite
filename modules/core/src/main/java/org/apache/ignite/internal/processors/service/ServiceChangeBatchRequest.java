@@ -27,6 +27,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -93,11 +94,6 @@ public class ServiceChangeBatchRequest implements DiscoveryCustomMessage, Messag
     @Nullable @Override public DiscoveryCustomMessage ackMessage() {
         // No-op.
         return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public short directType() {
-        return 536;
     }
 
     /** {@inheritDoc} */

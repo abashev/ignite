@@ -72,11 +72,6 @@ public class ServiceClusterDeploymentResult implements Message {
     }
 
     /** {@inheritDoc} */
-    @Override public short directType() {
-        return 170;
-    }
-
-    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(ServiceClusterDeploymentResult.class, this);
     }

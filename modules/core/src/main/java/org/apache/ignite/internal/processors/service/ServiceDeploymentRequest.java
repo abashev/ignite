@@ -71,11 +71,6 @@ public class ServiceDeploymentRequest extends ServiceChangeAbstractRequest imple
     }
 
     /** {@inheritDoc} */
-    @Override public short directType() {
-        return 537;
-    }
-
-    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(ServiceDeploymentRequest.class, this);
     }

@@ -110,13 +110,7 @@ public class ServiceClusterDeploymentResultBatch implements DiscoveryCustomMessa
     }
 
     /** {@inheritDoc} */
-    @Override public short directType() {
-        return 535;
-    }
-
-    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(ServiceClusterDeploymentResultBatch.class, this);
     }
-
 }

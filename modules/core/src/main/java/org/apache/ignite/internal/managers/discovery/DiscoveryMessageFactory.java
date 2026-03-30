@@ -301,6 +301,10 @@ public class DiscoveryMessageFactory implements MessageFactoryProvider {
 
         factory.register(86, GridCacheVersion::new, new GridCacheVersionSerializer());
 
+        factory.register(167, ServiceDeploymentProcessId::new, new ServiceDeploymentProcessIdSerializer());
+        factory.register(169, ServiceSingleNodeDeploymentResult::new, new ServiceSingleNodeDeploymentResultSerializer());
+        factory.register(170, ServiceClusterDeploymentResult::new, new ServiceClusterDeploymentResultSerializer());
+
         // DiscoveryCustomMessage
         factory.register(500, CacheStatisticsModeChangeMessage::new, new CacheStatisticsModeChangeMessageSerializer());
         factory.register(501, SecurityAwareCustomMessageWrapper::new,
@@ -344,15 +348,12 @@ public class DiscoveryMessageFactory implements MessageFactoryProvider {
             new ChangeGlobalStateMessageMarshallableSerializer(marsh, clsLdr));
         factory.register(533, ClientCacheChangeDummyDiscoveryMessage::new,
             new ClientCacheChangeDummyDiscoveryMessageMarshallableSerializer(marsh, clsLdr));
-        factory.register((short)534, DynamicCacheChangeBatch::new, new DynamicCacheChangeBatchMarshallableSerializer(marsh, clsLdr));
-        factory.register((short)167, ServiceDeploymentProcessId::new, new ServiceDeploymentProcessIdSerializer());
-        factory.register((short)169, ServiceSingleNodeDeploymentResult::new, new ServiceSingleNodeDeploymentResultSerializer());
-        factory.register((short)170, ServiceClusterDeploymentResult::new, new ServiceClusterDeploymentResultSerializer());
-        factory.register((short)535, ServiceClusterDeploymentResultBatch::new,
+        factory.register(534, DynamicCacheChangeBatch::new, new DynamicCacheChangeBatchMarshallableSerializer(marsh, clsLdr));
+        factory.register(535, ServiceClusterDeploymentResultBatch::new,
             new ServiceClusterDeploymentResultBatchSerializer());
-        factory.register((short)536, ServiceChangeBatchRequest::new, new ServiceChangeBatchRequestSerializer());
-        factory.register((short)537, ServiceDeploymentRequest::new,
+        factory.register(536, ServiceChangeBatchRequest::new, new ServiceChangeBatchRequestSerializer());
+        factory.register(537, ServiceDeploymentRequest::new,
             new ServiceDeploymentRequestMarshallableSerializer(marsh, clsLdr));
-        factory.register((short)538, ServiceUndeploymentRequest::new, new ServiceUndeploymentRequestSerializer());
+        factory.register(538, ServiceUndeploymentRequest::new, new ServiceUndeploymentRequestSerializer());
     }
 }
