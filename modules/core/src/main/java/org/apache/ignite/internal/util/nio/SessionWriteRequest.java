@@ -78,4 +78,19 @@ public interface SessionWriteRequest {
      * @return Span.
      */
     Span span();
+
+    /** @return Pre-serialized message bytes, or {@code null} if not pre-serialized. */
+    default byte[] serializedMessage() {
+        return null;
+    }
+
+    /** @return Offset in serialized bytes from which to continue writing. */
+    default int serializedOffset() {
+        return 0;
+    }
+
+    /** @param off New offset after partial write. */
+    default void serializedOffset(int off) {
+        // No-op.
+    }
 }

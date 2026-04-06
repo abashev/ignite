@@ -93,6 +93,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.System.arraycopy;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SOCKET_WRITE_BYTES;
@@ -647,18 +648,84 @@ public class GridNioServer<T> {
 
         GridSelectorNioSessionImpl impl = (GridSelectorNioSessionImpl)ses;
 
+        byte[] serialized = serializeMessage(ses, msg);
+
         if (createFut) {
             NioOperationFuture<?> fut = new NioOperationFuture<Void>(impl, NioOperation.REQUIRE_WRITE, msg,
                 skipRecoveryPred.apply(msg), ackC);
+
+            fut.serializedMessage(serialized);
 
             send0(impl, fut, false);
 
             return fut;
         }
         else {
-            SessionWriteRequest req = new WriteRequestImpl(ses, msg, skipRecoveryPred.apply(msg), ackC);
+            var req = new WriteRequestImpl(ses, msg, skipRecoveryPred.apply(msg), ackC, serialized);
 
             send0(impl, req, false);
+
+            return null;
+        }
+    }
+
+    /**
+     * Serializes message to byte array eagerly in the calling thread.
+     *
+     * @param ses Session.
+     * @param msg Message to serialize.
+     * @return Serialized message bytes, or {@code null} if eager serialization is not available.
+     */
+    private byte @Nullable [] serializeMessage(GridNioSession ses, Message msg) {
+        if (writerFactory == null || msgFactory == null)
+            return null;
+
+        MessageWriter writer;
+        MessageSerializer<Message> msgSer;
+
+        try {
+            writer = writerFactory.writer(ses);
+            msgSer = msgFactory.serializer(msg.directType());
+        }
+        catch (Exception e) {
+            if (log.isDebugEnabled())
+                log.debug("Failed to prepare eager serialization, will use lazy path [msg=" + msg + ", err=" + e + ']');
+
+            return null;
+        }
+
+        try {
+            int capacity = 4096;
+            var buf = ByteBuffer.allocate(capacity);
+
+            while (true) {
+                writer.setBuffer(buf);
+
+                if (msgSer.writeTo(msg, writer)) {
+                    writer.reset();
+
+                    int len = buf.position();
+                    var result = new byte[len];
+
+                    arraycopy(buf.array(), 0, result, 0, len);
+
+                    return result;
+                }
+
+                int pos = buf.position();
+
+                capacity *= 2;
+
+                var newBuf = ByteBuffer.allocate(capacity);
+
+                arraycopy(buf.array(), 0, newBuf.array(), 0, pos);
+                newBuf.position(pos);
+
+                buf = newBuf;
+            }
+        }
+        catch (Exception e) {
+            log.warning("Failed to eagerly serialize message, will use lazy path [msg=" + msg + ']', e);
 
             return null;
         }
@@ -1614,7 +1681,21 @@ public class GridNioServer<T> {
 
                 int startPos = buf.position();
 
-                if (messageFactory() == null) {
+                byte[] serialized = req.serializedMessage();
+
+                if (serialized != null) {
+                    int off = req.serializedOffset();
+                    int len = Math.min(serialized.length - off, buf.remaining());
+
+                    buf.put(serialized, off, len);
+                    off += len;
+
+                    finished = off >= serialized.length;
+
+                    if (!finished)
+                        req.serializedOffset(off);
+                }
+                else if (messageFactory() == null) {
                     assert msg instanceof ClientMessage;  // TODO: Will refactor in IGNITE-26554.
 
                     finished = ((ClientMessage)msg).writeTo(buf);
@@ -1815,7 +1896,21 @@ public class GridNioServer<T> {
 
                 int startPos = buf.position();
 
-                if (msgFactory == null) {
+                byte[] serialized = req.serializedMessage();
+
+                if (serialized != null) {
+                    int off = req.serializedOffset();
+                    int len = Math.min(serialized.length - off, buf.remaining());
+
+                    buf.put(serialized, off, len);
+                    off += len;
+
+                    finished = off >= serialized.length;
+
+                    if (!finished)
+                        req.serializedOffset(off);
+                }
+                else if (msgFactory == null) {
                     assert msg instanceof ClientMessage;  // TODO: Will refactor in IGNITE-26554.
 
                     finished = ((ClientMessage)msg).writeTo(buf);
@@ -3378,6 +3473,12 @@ public class GridNioServer<T> {
         /** Span for tracing. */
         private Span span;
 
+        /** Pre-serialized message bytes. */
+        private final byte[] serializedMsg;
+
+        /** Current offset in pre-serialized bytes for partial writes. */
+        private int serializedOff;
+
         /**
          * @param ses Session.
          * @param msg Message.
@@ -3388,11 +3489,27 @@ public class GridNioServer<T> {
             Object msg,
             boolean skipRecovery,
             IgniteInClosure<IgniteException> ackC) {
+            this(ses, msg, skipRecovery, ackC, null);
+        }
+
+        /**
+         * @param ses Session.
+         * @param msg Message.
+         * @param skipRecovery Skip recovery flag.
+         * @param ackC Closure invoked when message ACK is received.
+         * @param serializedMsg Pre-serialized message bytes.
+         */
+        WriteRequestImpl(GridNioSession ses,
+            Object msg,
+            boolean skipRecovery,
+            IgniteInClosure<IgniteException> ackC,
+            byte[] serializedMsg) {
             this.ses = ses;
             this.msg = msg;
             this.skipRecovery = skipRecovery;
             this.ackC = ackC;
             this.span = MTC.span();
+            this.serializedMsg = serializedMsg;
         }
 
         /** {@inheritDoc} */
@@ -3451,6 +3568,21 @@ public class GridNioServer<T> {
         }
 
         /** {@inheritDoc} */
+        @Override public byte[] serializedMessage() {
+            return serializedMsg;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int serializedOffset() {
+            return serializedOff;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void serializedOffset(int off) {
+            serializedOff = off;
+        }
+
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(WriteRequestImpl.class, this);
         }
@@ -3495,6 +3627,12 @@ public class GridNioServer<T> {
 
         /** */
         private IgniteInClosure<IgniteException> ackC;
+
+        /** Pre-serialized message bytes. */
+        private byte[] serializedMsg;
+
+        /** Current offset in pre-serialized bytes for partial writes. */
+        private int serializedOff;
 
         /**
          * @param sockCh Socket channel.
@@ -3662,6 +3800,26 @@ public class GridNioServer<T> {
         /** {@inheritDoc} */
         @Override public boolean skipRecovery() {
             return skipRecovery;
+        }
+
+        /** {@inheritDoc} */
+        @Override public byte[] serializedMessage() {
+            return serializedMsg;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int serializedOffset() {
+            return serializedOff;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void serializedOffset(int off) {
+            serializedOff = off;
+        }
+
+        /** Sets pre-serialized message bytes. */
+        void serializedMessage(byte[] serializedMsg) {
+            this.serializedMsg = serializedMsg;
         }
 
         /** {@inheritDoc} */
