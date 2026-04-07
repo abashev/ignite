@@ -325,9 +325,7 @@ public class MarshallerContextImpl implements MarshallerContext {
                 if (failIfUnregistered && !fut.isDone())
                     throw new UnregisteredBinaryTypeException(typeId, fut);
 
-                MappingExchangeResult res = fut.get();
-
-                return convertXchRes(res);
+                return resolveMappingExchange(platformId, typeId, clsName, fut);
             }
         }
         else {
@@ -341,10 +339,35 @@ public class MarshallerContextImpl implements MarshallerContext {
             if (failIfUnregistered && !fut.isDone())
                 throw new UnregisteredBinaryTypeException(typeId, fut);
 
-            MappingExchangeResult res = fut.get();
-
-            return convertXchRes(res);
+            return resolveMappingExchange(platformId, typeId, clsName, fut);
         }
+    }
+
+    /**
+     * Resolves mapping exchange future. If the future is already done, returns the result immediately.
+     * Otherwise, registers the class name locally to avoid blocking the calling thread
+     * (which may be a discovery notifier worker, leading to a deadlock).
+     * The mapping proposal has already been sent to the cluster and will be accepted asynchronously.
+     *
+     * @param platformId Platform id.
+     * @param typeId Type id.
+     * @param clsName Class name.
+     * @param fut Mapping exchange future.
+     * @return {@code true} if registration succeeded.
+     * @throws IgniteCheckedException If failed.
+     */
+    private boolean resolveMappingExchange(
+        byte platformId,
+        int typeId,
+        String clsName,
+        GridFutureAdapter<MappingExchangeResult> fut
+    ) throws IgniteCheckedException {
+        if (fut.isDone())
+            return convertXchRes(fut.get());
+
+        // The mapping proposal is already in-flight to the cluster.
+        // Register locally to avoid blocking the calling thread — the cluster will accept it asynchronously.
+        return registerClassNameLocally(platformId, typeId, clsName);
     }
 
     /** {@inheritDoc} */

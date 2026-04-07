@@ -695,7 +695,7 @@ public class GridNioServer<T> {
         }
 
         try {
-            int capacity = 4096;
+            int capacity = 1024;
             var buf = ByteBuffer.allocate(capacity);
 
             while (true) {
@@ -3550,6 +3550,7 @@ public class GridNioServer<T> {
         /** {@inheritDoc} */
         @Override public void resetSession(GridNioSession ses) {
             this.ses = ses;
+            this.serializedOff = 0;
         }
 
         /** {@inheritDoc} */
@@ -3744,6 +3745,7 @@ public class GridNioServer<T> {
             assert msg instanceof Message : msg;
 
             this.ses = (GridSelectorNioSessionImpl)ses;
+            this.serializedOff = 0;
         }
 
         /**
