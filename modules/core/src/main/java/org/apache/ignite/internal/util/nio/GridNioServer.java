@@ -680,6 +680,13 @@ public class GridNioServer<T> {
         if (writerFactory == null || msgFactory == null)
             return null;
 
+        // Skip eager serialization for GridIoMessage — inner messages may contain
+        // MarshallableMessage payloads whose prepareMarshal() performs heavy blocking operations
+        // (e.g., U.marshal() → registerClassName() → future.get()) that can deadlock
+        // when called from certain threads (e.g., disco-notifier-worker).
+        if (msg instanceof GridIoMessage)
+            return null;
+
         MessageWriter writer;
         MessageSerializer<Message> msgSer;
 
