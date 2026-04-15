@@ -17,7 +17,9 @@
 
 package org.apache.ignite.internal;
 
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.TestMessage;
+import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.plugin.extensions.communication.MessageArrayType;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
@@ -268,5 +270,21 @@ public class TestMessageSerializer implements MessageSerializer<TestMessage> {
         }
 
         return true;
+    }
+
+    /** */
+    @Override public void prepareMarshalCacheObjects(TestMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
+        if (msg.keyCacheObject != null)
+            msg.keyCacheObject.prepareMarshal(ctx);
+        if (msg.cacheObject != null)
+            msg.cacheObject.prepareMarshal(ctx);
+    }
+
+    /** */
+    @Override public void finishUnmarshalCacheObjects(TestMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
+        if (msg.keyCacheObject != null)
+            msg.keyCacheObject.finishUnmarshal(ctx, ldr);
+        if (msg.cacheObject != null)
+            msg.cacheObject.finishUnmarshal(ctx, ldr);
     }
 }

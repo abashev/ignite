@@ -114,6 +114,12 @@ public class MessageSerializerGenerator {
     /** The marshallable message type. */
     private final TypeMirror marshallableMsgType;
 
+    /** Collection of lines for the {@code prepareMarshalCacheObjects} method. Empty when the message has no such fields. */
+    private final List<String> prepareCacheObjects = new ArrayList<>();
+
+    /** Collection of lines for the {@code finishUnmarshalCacheObjects} method. Empty when the message has no such fields. */
+    private final List<String> finishCacheObjects = new ArrayList<>();
+
     /** */
     private int indent;
 
@@ -189,6 +195,20 @@ public class MessageSerializerGenerator {
 
             writer.write(TAB + "}" + NL);
 
+            // Write #prepareMarshalCacheObjects / #finishUnmarshalCacheObjects overrides if the message has any
+            // cache-object-bearing @Order fields (IGNITE-28520).
+            if (!prepareCacheObjects.isEmpty()) {
+                writer.write(NL);
+
+                for (String p: prepareCacheObjects)
+                    writer.write(p + NL);
+
+                writer.write(NL);
+
+                for (String f: finishCacheObjects)
+                    writer.write(f + NL);
+            }
+
             writer.write("}");
 
             writer.write(NL);
@@ -242,6 +262,178 @@ public class MessageSerializerGenerator {
 
         finish(write, false, false);
         finish(read, true, marshallableMessage());
+
+        generateCacheObjectMethods(fields);
+    }
+
+    /**
+     * Generates bodies of {@code prepareMarshalCacheObjects} / {@code finishUnmarshalCacheObjects} overrides when the
+     * message carries at least one {@code @Order}-annotated field whose declared type is {@code CacheObject},
+     * {@code KeyCacheObject}, a {@code Collection} of them, or an array of them. Traversal is single-level: it does
+     * not recurse into nested messages or enter map values. See IGNITE-28520.
+     */
+    private void generateCacheObjectMethods(List<VariableElement> fields) throws Exception {
+        List<VariableElement> cacheObjFields = new ArrayList<>();
+
+        for (VariableElement field: fields) {
+            if (isCacheObjectBearingField(field.asType()))
+                cacheObjFields.add(field);
+        }
+
+        if (cacheObjFields.isEmpty())
+            return;
+
+        imports.add("org.apache.ignite.IgniteCheckedException");
+        imports.add("org.apache.ignite.internal.processors.cache.CacheObjectValueContext");
+
+        startCacheObjectMethod(prepareCacheObjects, true);
+        startCacheObjectMethod(finishCacheObjects, false);
+
+        indent++;
+
+        for (VariableElement field: cacheObjFields) {
+            emitCacheObjectCall(prepareCacheObjects, field, true);
+            emitCacheObjectCall(finishCacheObjects, field, false);
+        }
+
+        indent--;
+
+        prepareCacheObjects.add(identedLine("}"));
+        finishCacheObjects.add(identedLine("}"));
+    }
+
+    /**
+     * @return {@code true} if the given field type is a {@code CacheObject}/{@code KeyCacheObject}, a collection of
+     *      them, or an array of them. Maps and nested messages are intentionally excluded — see IGNITE-28520 scope.
+     */
+    private boolean isCacheObjectBearingField(TypeMirror type) {
+        if (type.getKind() == TypeKind.ARRAY) {
+            TypeMirror comp = ((ArrayType)type).getComponentType();
+
+            return comp.getKind() == TypeKind.DECLARED && isCacheObjectType(comp);
+        }
+
+        if (type.getKind() != TypeKind.DECLARED)
+            return false;
+
+        if (isCacheObjectType(type))
+            return true;
+
+        // Map is intentionally skipped even though Map is Collection-unrelated — exclude it explicitly for clarity.
+        if (assignableFrom(erasedType(type), type(Map.class.getName())))
+            return false;
+
+        if (assignableFrom(erasedType(type), type(Collection.class.getName()))) {
+            List<? extends TypeMirror> typeArgs = ((DeclaredType)type).getTypeArguments();
+
+            if (typeArgs.size() == 1) {
+                TypeMirror arg = typeArgs.get(0);
+
+                return arg.getKind() == TypeKind.DECLARED && isCacheObjectType(arg);
+            }
+        }
+
+        return false;
+    }
+
+    /** @return {@code true} if {@code type} is assignable to {@code CacheObject} (this also covers {@code KeyCacheObject}). */
+    private boolean isCacheObjectType(TypeMirror type) {
+        return assignableFrom(type, type("org.apache.ignite.internal.processors.cache.CacheObject"));
+    }
+
+    /** Emits method signature and opening brace for cache-object marshalling methods. */
+    private void startCacheObjectMethod(List<String> code, boolean prepare) {
+        indent = 1;
+
+        code.add(identedLine(METHOD_JAVADOC));
+
+        if (prepare) {
+            code.add(identedLine(
+                "@Override public void prepareMarshalCacheObjects(" + type.getSimpleName() +
+                    " msg, CacheObjectValueContext ctx) throws IgniteCheckedException {"));
+        }
+        else {
+            code.add(identedLine(
+                "@Override public void finishUnmarshalCacheObjects(" + type.getSimpleName() +
+                    " msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {"));
+        }
+    }
+
+    /**
+     * Emits a single field traversal statement — a guarded {@code prepareMarshal} / {@code finishUnmarshal} call
+     * for a direct {@code CacheObject} field, or a null-safe loop for a collection / array of them.
+     */
+    private void emitCacheObjectCall(List<String> code, VariableElement field, boolean prepare) {
+        String mtd = prepare ? "prepareMarshal(ctx)" : "finishUnmarshal(ctx, ldr)";
+
+        String accessor = fieldAccessor(field);
+
+        TypeMirror type = field.asType();
+
+        if (type.getKind() == TypeKind.DECLARED && isCacheObjectType(type)) {
+            code.add(identedLine("if (%s != null)", accessor));
+
+            indent++;
+
+            code.add(identedLine("%s.%s;", accessor, mtd));
+
+            indent--;
+        }
+        else {
+            // Collection or array of CacheObject — iterate with a null-check on both the container and the element.
+            code.add(identedLine("if (%s != null) {", accessor));
+
+            indent++;
+
+            String elementType = "org.apache.ignite.internal.processors.cache.KeyCacheObject";
+
+            if (type.getKind() == TypeKind.ARRAY) {
+                TypeMirror comp = ((ArrayType)type).getComponentType();
+
+                if (!assignableFrom(comp, type(elementType)))
+                    elementType = "org.apache.ignite.internal.processors.cache.CacheObject";
+            }
+            else {
+                TypeMirror arg = ((DeclaredType)type).getTypeArguments().get(0);
+
+                if (!assignableFrom(arg, type(elementType)))
+                    elementType = "org.apache.ignite.internal.processors.cache.CacheObject";
+            }
+
+            imports.add(elementType);
+
+            String simpleElement = elementType.substring(elementType.lastIndexOf('.') + 1);
+
+            code.add(identedLine("for (%s obj : %s) {", simpleElement, accessor));
+
+            indent++;
+
+            code.add(identedLine("if (obj != null)"));
+
+            indent++;
+
+            code.add(identedLine("obj.%s;", mtd));
+
+            indent--;
+
+            indent--;
+
+            code.add(identedLine("}"));
+
+            indent--;
+
+            code.add(identedLine("}"));
+        }
+    }
+
+    /** Returns the field access expression, taking superclass-field access into account. */
+    private String fieldAccessor(VariableElement field) {
+        String name = field.getSimpleName().toString();
+
+        if (type.equals(field.getEnclosingElement()))
+            return "msg." + name;
+
+        return "((" + field.getEnclosingElement().getSimpleName() + ")msg)." + name;
     }
 
     /**
