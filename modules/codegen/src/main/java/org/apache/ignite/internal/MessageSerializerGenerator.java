@@ -114,10 +114,10 @@ public class MessageSerializerGenerator {
     /** The marshallable message type. */
     private final TypeMirror marshallableMsgType;
 
-    /** Collection of lines for the {@code prepareMarshalCacheObjects} method. Empty when the message has no such fields. */
+    /** */
     private final List<String> prepareCacheObjects = new ArrayList<>();
 
-    /** Collection of lines for the {@code finishUnmarshalCacheObjects} method. Empty when the message has no such fields. */
+    /** */
     private final List<String> finishCacheObjects = new ArrayList<>();
 
     /** */
@@ -195,8 +195,6 @@ public class MessageSerializerGenerator {
 
             writer.write(TAB + "}" + NL);
 
-            // Write #prepareMarshalCacheObjects / #finishUnmarshalCacheObjects overrides if the message has any
-            // cache-object-bearing @Order fields (IGNITE-28520).
             if (!prepareCacheObjects.isEmpty()) {
                 writer.write(NL);
 
@@ -266,12 +264,7 @@ public class MessageSerializerGenerator {
         generateCacheObjectMethods(fields);
     }
 
-    /**
-     * Generates bodies of {@code prepareMarshalCacheObjects} / {@code finishUnmarshalCacheObjects} overrides when the
-     * message carries at least one {@code @Order}-annotated field whose declared type is {@code CacheObject},
-     * {@code KeyCacheObject}, a {@code Collection} of them, or an array of them. Traversal is single-level: it does
-     * not recurse into nested messages or enter map values. See IGNITE-28520.
-     */
+    /** IGNITE-28520 Phase 1: emits per-field CacheObject marshal hooks (direct / Collection / array, single level). */
     private void generateCacheObjectMethods(List<VariableElement> fields) throws Exception {
         List<VariableElement> cacheObjFields = new ArrayList<>();
 
@@ -302,10 +295,7 @@ public class MessageSerializerGenerator {
         finishCacheObjects.add(identedLine("}"));
     }
 
-    /**
-     * @return {@code true} if the given field type is a {@code CacheObject}/{@code KeyCacheObject}, a collection of
-     *      them, or an array of them. Maps and nested messages are intentionally excluded — see IGNITE-28520 scope.
-     */
+    /** */
     private boolean isCacheObjectBearingField(TypeMirror type) {
         if (type.getKind() == TypeKind.ARRAY) {
             TypeMirror comp = ((ArrayType)type).getComponentType();
@@ -319,7 +309,6 @@ public class MessageSerializerGenerator {
         if (isCacheObjectType(type))
             return true;
 
-        // Map is intentionally skipped even though Map is Collection-unrelated — exclude it explicitly for clarity.
         if (assignableFrom(erasedType(type), type(Map.class.getName())))
             return false;
 
@@ -336,12 +325,12 @@ public class MessageSerializerGenerator {
         return false;
     }
 
-    /** @return {@code true} if {@code type} is assignable to {@code CacheObject} (this also covers {@code KeyCacheObject}). */
+    /** */
     private boolean isCacheObjectType(TypeMirror type) {
         return assignableFrom(type, type("org.apache.ignite.internal.processors.cache.CacheObject"));
     }
 
-    /** Emits method signature and opening brace for cache-object marshalling methods. */
+    /** */
     private void startCacheObjectMethod(List<String> code, boolean prepare) {
         indent = 1;
 
@@ -359,10 +348,7 @@ public class MessageSerializerGenerator {
         }
     }
 
-    /**
-     * Emits a single field traversal statement — a guarded {@code prepareMarshal} / {@code finishUnmarshal} call
-     * for a direct {@code CacheObject} field, or a null-safe loop for a collection / array of them.
-     */
+    /** */
     private void emitCacheObjectCall(List<String> code, VariableElement field, boolean prepare) {
         String mtd = prepare ? "prepareMarshal(ctx)" : "finishUnmarshal(ctx, ldr)";
 
@@ -380,7 +366,6 @@ public class MessageSerializerGenerator {
             indent--;
         }
         else {
-            // Collection or array of CacheObject — iterate with a null-check on both the container and the element.
             code.add(identedLine("if (%s != null) {", accessor));
 
             indent++;
@@ -426,7 +411,7 @@ public class MessageSerializerGenerator {
         }
     }
 
-    /** Returns the field access expression, taking superclass-field access into account. */
+    /** */
     private String fieldAccessor(VariableElement field) {
         String name = field.getSimpleName().toString();
 

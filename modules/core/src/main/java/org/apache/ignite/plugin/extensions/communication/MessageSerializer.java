@@ -20,9 +20,7 @@ package org.apache.ignite.plugin.extensions.communication;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 
-/**
- * Interface for message serialization logic.
- */
+/** Message serialization logic. */
 public interface MessageSerializer<M extends Message> {
     /**
      * Writes this message to provided byte buffer.
@@ -43,39 +41,19 @@ public interface MessageSerializer<M extends Message> {
     public boolean readFrom(M msg, MessageReader reader);
 
     /**
-     * Prepares {@link org.apache.ignite.internal.processors.cache.CacheObject} fields of the given message for
-     * marshalling. This is the first phase of the two-phase marshalling introduced by IGNITE-28520: it is expected
-     * to be invoked on a <b>user thread</b> before the message is handed off to the NIO worker, so that
-     * {@link org.apache.ignite.internal.processors.cache.CacheObject#prepareMarshal(CacheObjectValueContext)} never
-     * runs on the NIO communication thread (or, worse, the Discovery thread where it could deadlock).
-     *
-     * <p>The default implementation is a no-op. The generated serializer overrides it for messages that contain
-     * at least one {@code @Order}-annotated field whose declared type is {@code CacheObject} / {@code KeyCacheObject}
-     * (including {@code Collection<CacheObject>} and {@code CacheObject[]}). Only the top level is traversed — the
-     * traversal does <b>not</b> recurse into nested messages or map values.
-     *
-     * @param msg Message instance.
-     * @param ctx Cache object value context.
-     * @throws IgniteCheckedException If marshalling of any contained cache object fails.
+     * Phase 1 of two-phase marshalling (IGNITE-28520): invoked on the <b>user thread</b> before the message is
+     * handed off to the NIO worker. The generated implementation walks {@code @Order}-annotated
+     * {@code CacheObject}/{@code KeyCacheObject} fields (direct, {@code Collection<>}, and array — single level,
+     * no maps, no recursion into nested messages) and calls {@code CacheObject.prepareMarshal} on each, so the NIO
+     * thread never does it. Default is a no-op.
      */
     public default void prepareMarshalCacheObjects(M msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         // No-op by default.
     }
 
     /**
-     * Finishes unmarshalling of {@link org.apache.ignite.internal.processors.cache.CacheObject} fields of the given
-     * message. Intended to be invoked on a <b>user thread</b> (for example, on a listener dispatch thread) after
-     * {@link #readFrom(Message, MessageReader)} returns {@code true} on the NIO worker, so that
-     * {@link org.apache.ignite.internal.processors.cache.CacheObject#finishUnmarshal(CacheObjectValueContext, ClassLoader)}
-     * never runs on the NIO communication thread.
-     *
-     * <p>The default implementation is a no-op. Mirrors the traversal rules of
-     * {@link #prepareMarshalCacheObjects(Message, CacheObjectValueContext)}.
-     *
-     * @param msg Message instance.
-     * @param ctx Cache object value context.
-     * @param ldr Class loader to use for value deserialization.
-     * @throws IgniteCheckedException If unmarshalling of any contained cache object fails.
+     * Receive-side mirror of {@link #prepareMarshalCacheObjects}: called on a user (listener-dispatch) thread to
+     * run {@code CacheObject.finishUnmarshal} for the same set of fields. Default is a no-op.
      */
     public default void finishUnmarshalCacheObjects(M msg, CacheObjectValueContext ctx, ClassLoader ldr)
         throws IgniteCheckedException {

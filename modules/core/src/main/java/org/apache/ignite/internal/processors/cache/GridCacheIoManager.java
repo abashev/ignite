@@ -1160,29 +1160,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         return true;
     }
 
-    /**
-     * Invokes {@link MessageSerializer#prepareMarshalCacheObjects} on the user thread for the given message, as part
-     * of the IGNITE-28520 Phase 1 two-phase marshalling. The generated serializer method walks {@code @Order}-annotated
-     * {@link CacheObject}/{@link org.apache.ignite.internal.processors.cache.KeyCacheObject} fields of {@code msg}
-     * (including single-level collections and arrays) and calls
-     * {@link CacheObject#prepareMarshal(CacheObjectValueContext)} on each, so that the NIO communication thread never
-     * has to do this work.
-     *
-     * <p>This call is intentionally <b>additive</b> to the existing
-     * {@link GridCacheMessage#prepareMarshal(GridCacheSharedContext)} override path: it runs right after the manual
-     * override. For messages whose override has already populated {@code valBytes} of every cache object field, this
-     * call becomes a no-op thanks to the idempotency guard inside
-     * {@link org.apache.ignite.internal.processors.cache.CacheObjectImpl#prepareMarshal(CacheObjectValueContext)}
-     * ({@code if (valBytes == null)}). For messages that don't override {@code prepareMarshal(GridCacheSharedContext)}
-     * but do carry cache-object fields, the generated method is what actually does the marshalling work.
-     *
-     * <p>Only single-cache messages ({@link GridCacheIdMessage}) are processed here — cross-cache messages resolve
-     * their per-entry cache contexts internally via their hand-written overrides, and we don't try to second-guess
-     * them from a single shared context.
-     *
-     * @param msg Message being sent.
-     * @throws IgniteCheckedException If the generated serializer fails to marshal a cache object field.
-     */
+    /** IGNITE-28520 Phase 1: invokes the generated per-field {@code CacheObject.prepareMarshal} on the user thread. */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void prepareMarshalGeneratedCacheObjects(GridCacheMessage msg) throws IgniteCheckedException {
         if (!(msg instanceof GridCacheIdMessage))
@@ -1199,17 +1177,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
             ser.prepareMarshalCacheObjects(msg, cacheObjCtx);
     }
 
-    /**
-     * Invokes {@link MessageSerializer#finishUnmarshalCacheObjects} on the user (listener-dispatch) thread — the
-     * receive-side mirror of {@link #prepareMarshalGeneratedCacheObjects}. See that method's docs for the full
-     * contract. This call is also additive to the manual
-     * {@link GridCacheMessage#finishUnmarshal(GridCacheSharedContext, ClassLoader)} override path and idempotent for
-     * cache objects whose values have already been deserialized.
-     *
-     * @param msg Message being received.
-     * @param ldr Class loader used for value deserialization.
-     * @throws IgniteCheckedException If the generated serializer fails to unmarshal a cache object field.
-     */
+    /** Receive-side mirror of {@link #prepareMarshalGeneratedCacheObjects}. */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void finishUnmarshalGeneratedCacheObjects(GridCacheMessage msg, ClassLoader ldr) throws IgniteCheckedException {
         if (!(msg instanceof GridCacheIdMessage))
