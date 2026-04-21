@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.TestMessage;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersionSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageArrayType;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageItemType;
@@ -34,6 +35,8 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
  * @see org.apache.ignite.internal.MessageProcessor
  */
 public class TestMessageSerializer implements MessageSerializer<TestMessage> {
+    /** */
+    private final static GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
     /** */
     private final static MessageArrayType intMatrixCollDesc = new MessageArrayType(new MessageItemType(MessageCollectionItemType.INT_ARR), int[].class);
     /** */
@@ -274,6 +277,12 @@ public class TestMessageSerializer implements MessageSerializer<TestMessage> {
 
     /** */
     @Override public void prepareMarshalCacheObjects(TestMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
+        if (msg.ver != null)
+            GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(msg.ver, ctx);
+        if (msg.verArr != null) {
+            for (GridCacheVersion e : msg.verArr)
+                GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(e, ctx);
+        }
         if (msg.keyCacheObject != null)
             msg.keyCacheObject.prepareMarshal(ctx);
         if (msg.cacheObject != null)
@@ -282,6 +291,12 @@ public class TestMessageSerializer implements MessageSerializer<TestMessage> {
 
     /** */
     @Override public void finishUnmarshalCacheObjects(TestMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
+        if (msg.ver != null)
+            GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(msg.ver, ctx, ldr);
+        if (msg.verArr != null) {
+            for (GridCacheVersion e : msg.verArr)
+                GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
+        }
         if (msg.keyCacheObject != null)
             msg.keyCacheObject.finishUnmarshal(ctx, ldr);
         if (msg.cacheObject != null)

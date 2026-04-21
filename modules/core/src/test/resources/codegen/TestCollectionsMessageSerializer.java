@@ -17,7 +17,11 @@
 
 package org.apache.ignite.internal;
 
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.TestCollectionsMessage;
+import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersionSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionType;
 import org.apache.ignite.plugin.extensions.communication.MessageItemType;
@@ -31,6 +35,8 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
  * @see org.apache.ignite.internal.MessageProcessor
  */
 public class TestCollectionsMessageSerializer implements MessageSerializer<TestCollectionsMessage> {
+    /** */
+    private final static GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
     /** */
     private final static MessageCollectionType affTopVersionListCollDesc = new MessageCollectionType(new MessageItemType(MessageCollectionItemType.AFFINITY_TOPOLOGY_VERSION), false);
     /** */
@@ -451,5 +457,21 @@ public class TestCollectionsMessageSerializer implements MessageSerializer<TestC
         }
 
         return true;
+    }
+
+    /** */
+    @Override public void prepareMarshalCacheObjects(TestCollectionsMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
+        if (msg.messageList != null) {
+            for (GridCacheVersion e : msg.messageList)
+                GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(e, ctx);
+        }
+    }
+
+    /** */
+    @Override public void finishUnmarshalCacheObjects(TestCollectionsMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
+        if (msg.messageList != null) {
+            for (GridCacheVersion e : msg.messageList)
+                GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
+        }
     }
 }
