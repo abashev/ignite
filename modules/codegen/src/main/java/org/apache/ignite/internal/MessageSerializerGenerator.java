@@ -52,7 +52,6 @@ import javax.tools.Diagnostic;
 import javax.tools.FileObject;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
-import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.systemview.SystemViewRowAttributeWalkerProcessor;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
@@ -322,7 +321,14 @@ public class MessageSerializerGenerator {
         MSG_COLL,
         /** {@code Message[]} with concrete component type. */
         MSG_ARR,
-        /** Skipped — Map, abstract Message, cross-cache nested Message, unsupported. */
+        /**
+         * {@code Map<K, V>} where at least one of {@code K}, {@code V} is a {@code CacheObject} or a recursable
+         * {@code Message}. Each traversable side is walked via {@link
+         * org.apache.ignite.internal.direct.stream.PendingMap#keysOf(Map)} / {@code valuesOf(Map)} so that
+         * receive-side {@code PendingMap}s are not materialized before the cache-object hook has run.
+         */
+        MAP,
+        /** Skipped — abstract Message, cross-cache nested Message, Map with no traversable side, unsupported. */
         SKIP
     }
 
@@ -346,8 +352,21 @@ public class MessageSerializerGenerator {
         if (isCacheObjectType(t))
             return FieldKind.CO;
 
-        if (assignableFrom(erasedType(t), type(Map.class.getName())))
-            return FieldKind.SKIP;
+        if (assignableFrom(erasedType(t), type(Map.class.getName()))) {
+            List<? extends TypeMirror> args = ((DeclaredType)t).getTypeArguments();
+
+            if (args.size() != 2)
+                return FieldKind.SKIP;
+
+            FieldKind kSide = classifyMapSide(args.get(0));
+            FieldKind vSide = classifyMapSide(args.get(1));
+
+            // No traversable key or value — nothing to do for CacheObject hooks.
+            if (kSide == FieldKind.SKIP && vSide == FieldKind.SKIP)
+                return FieldKind.SKIP;
+
+            return FieldKind.MAP;
+        }
 
         if (assignableFrom(erasedType(t), type(Collection.class.getName()))) {
             List<? extends TypeMirror> args = ((DeclaredType)t).getTypeArguments();
@@ -365,6 +384,18 @@ public class MessageSerializerGenerator {
 
             return isRecursableMessage(arg) ? FieldKind.MSG_COLL : FieldKind.SKIP;
         }
+
+        return isRecursableMessage(t) ? FieldKind.MSG : FieldKind.SKIP;
+    }
+
+    /** Classifies one side (key or value) of a {@code Map} field: {@link FieldKind#CO}, {@link FieldKind#MSG}, or
+     *  {@link FieldKind#SKIP}. */
+    private FieldKind classifyMapSide(TypeMirror t) {
+        if (t.getKind() != TypeKind.DECLARED)
+            return FieldKind.SKIP;
+
+        if (isCacheObjectType(t))
+            return FieldKind.CO;
 
         return isRecursableMessage(t) ? FieldKind.MSG : FieldKind.SKIP;
     }
@@ -481,8 +512,108 @@ public class MessageSerializerGenerator {
                 emitMsgIterable(code, accessor, (DeclaredType)((ArrayType)t).getComponentType(), prepare);
                 break;
 
+            case MAP:
+                emitMapTraversal(code, accessor, (DeclaredType)t, prepare);
+                break;
+
             default:
                 throw new IllegalStateException("Unexpected kind: " + kind);
+        }
+    }
+
+    /**
+     * Emits traversal code for a {@code Map<K, V>} field. One or both sides may be a {@code CacheObject} or a
+     * recursable {@code Message}; each traversable side is walked independently using {@link
+     * org.apache.ignite.internal.direct.stream.PendingMap#keysOf(Map)} / {@code valuesOf(Map)}. The helper
+     * dispatches between the receive-side {@code PendingMap} (iterates staged entries without materialization)
+     * and the send-side real map (delegates to {@code keySet()} / {@code values()}).
+     */
+    private void emitMapTraversal(List<String> code, String accessor, DeclaredType mapType, boolean prepare) {
+        List<? extends TypeMirror> args = mapType.getTypeArguments();
+
+        TypeMirror keyT = args.get(0);
+        TypeMirror valT = args.get(1);
+
+        FieldKind kSide = classifyMapSide(keyT);
+        FieldKind vSide = classifyMapSide(valT);
+
+        imports.add("org.apache.ignite.internal.direct.stream.PendingMap");
+
+        code.add(identedLine("if (%s != null) {", accessor));
+
+        indent++;
+
+        if (kSide != FieldKind.SKIP)
+            emitMapSideIteration(code, accessor, keyT, kSide, true, prepare);
+
+        if (vSide != FieldKind.SKIP)
+            emitMapSideIteration(code, accessor, valT, vSide, false, prepare);
+
+        indent--;
+
+        code.add(identedLine("}"));
+    }
+
+    /**
+     * Emits an iteration block over keys or values of a Map field, calling the appropriate CacheObject or
+     * nested-Message marshal hook on each element.
+     *
+     * @param code     Target code buffer.
+     * @param accessor Field accessor expression (e.g. {@code msg.myMap}).
+     * @param sideType Declared type of the map side being traversed (key type or value type).
+     * @param sideKind {@link FieldKind#CO} or {@link FieldKind#MSG}.
+     * @param isKey    {@code true} to iterate keys via {@code PendingMap.keysOf}, {@code false} for values.
+     * @param prepare  {@code true} for {@code prepareMarshalCacheObjects}, {@code false} for
+     *                 {@code finishUnmarshalCacheObjects}.
+     */
+    private void emitMapSideIteration(
+        List<String> code,
+        String accessor,
+        TypeMirror sideType,
+        FieldKind sideKind,
+        boolean isKey,
+        boolean prepare
+    ) {
+        String helper = isKey ? "PendingMap.keysOf" : "PendingMap.valuesOf";
+        String var = isKey ? "k" : "v";
+
+        if (sideKind == FieldKind.CO) {
+            String elementType = "org.apache.ignite.internal.processors.cache.KeyCacheObject";
+
+            if (!assignableFrom(sideType, type(elementType)))
+                elementType = "org.apache.ignite.internal.processors.cache.CacheObject";
+
+            imports.add(elementType);
+
+            String simple = elementType.substring(elementType.lastIndexOf('.') + 1);
+            String mtd = prepare ? "prepareMarshal(ctx)" : "finishUnmarshal(ctx, ldr)";
+
+            code.add(identedLine("for (%s %s : %s(%s))", simple, var, helper, accessor));
+
+            indent++;
+
+            code.add(identedLine("%s.%s;", var, mtd));
+
+            indent--;
+        }
+        else {
+            assert sideKind == FieldKind.MSG : sideKind;
+
+            DeclaredType msgType = (DeclaredType)sideType;
+            String serRef = nestedSerializerRef(msgType);
+            String elemSimple = ((TypeElement)msgType.asElement()).getSimpleName().toString();
+
+            imports.add(((TypeElement)msgType.asElement()).getQualifiedName().toString());
+
+            String call = prepare ? "prepareMarshalCacheObjects(%s, ctx)" : "finishUnmarshalCacheObjects(%s, ctx, ldr)";
+
+            code.add(identedLine("for (%s %s : %s(%s))", elemSimple, var, helper, accessor));
+
+            indent++;
+
+            code.add(identedLine("%s." + call + ";", serRef, var));
+
+            indent--;
         }
     }
 

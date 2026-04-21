@@ -46,6 +46,10 @@ public interface MessageSerializer<M extends Message> {
      * {@code CacheObject}/{@code KeyCacheObject} fields (direct, {@code Collection<>}, and array — single level,
      * no maps, no recursion into nested messages) and calls {@code CacheObject.prepareMarshal} on each, so the NIO
      * thread never does it. Default is a no-op.
+     *
+     * @param msg Message instance.
+     * @param ctx Cache object value context.
+     * @throws IgniteCheckedException If marshalling fails.
      */
     public default void prepareMarshalCacheObjects(M msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         // No-op by default.
@@ -54,6 +58,11 @@ public interface MessageSerializer<M extends Message> {
     /**
      * Receive-side mirror of {@link #prepareMarshalCacheObjects}: called on a user (listener-dispatch) thread to
      * run {@code CacheObject.finishUnmarshal} for the same set of fields. Default is a no-op.
+     *
+     * @param msg Message instance.
+     * @param ctx Cache object value context.
+     * @param ldr Class loader used to resolve unmarshalled classes.
+     * @throws IgniteCheckedException If unmarshalling fails.
      */
     public default void finishUnmarshalCacheObjects(M msg, CacheObjectValueContext ctx, ClassLoader ldr)
         throws IgniteCheckedException {

@@ -306,6 +306,51 @@ public class MessageProcessorTest {
     }
 
     /**
+     * Positive test for the safe replacement of an {@code @Order Map<KeyCacheObject, ?>} field:
+     * a parent {@code Message} transmits a {@code Collection<Entry>}, where {@code Entry} is a small
+     * {@code Message} holding {@code (KeyCacheObject key, Message val)}. The generator must emit recursion into
+     * every entry so that {@code KeyCacheObject#finishUnmarshal} runs on the user thread before application code
+     * reassembles a {@code HashMap} from the collection — the moment at which {@code KeyCacheObject.hashCode}
+     * becomes stable.
+     */
+    @Test
+    public void testKeyCacheObjectInCollectionOfEntries() {
+        Compilation compilation = compile("KeyCacheObjectEntryMsg.java", "TestKeyCacheObjectCollectionMessage.java");
+
+        assertThat(compilation).succeeded();
+
+        assertEquals(2, compilation.generatedSourceFiles().size());
+
+        assertThat(compilation)
+            .generatedSourceFile("org.apache.ignite.internal.KeyCacheObjectEntryMsgSerializer")
+            .hasSourceEquivalentTo(javaFile("KeyCacheObjectEntryMsgSerializer.java"));
+
+        assertThat(compilation)
+            .generatedSourceFile("org.apache.ignite.internal.TestKeyCacheObjectCollectionMessageSerializer")
+            .hasSourceEquivalentTo(javaFile("TestKeyCacheObjectCollectionMessageSerializer.java"));
+    }
+
+    /**
+     * Positive test for {@code @Order Map<KeyCacheObject, GridCacheVersion>}: the generator emits a standard
+     * {@code writeMap} / {@code readMap} pair and — crucially — a {@code finishUnmarshalCacheObjects} that walks
+     * keys via {@code PendingMap.keysOf} and values via {@code PendingMap.valuesOf}, calling
+     * {@code KeyCacheObject#finishUnmarshal} and the nested {@code GridCacheVersionSerializer} on each element.
+     * The staging {@link org.apache.ignite.internal.direct.stream.PendingMap} defers real {@code HashMap}
+     * assembly to the user thread, so by the time the consumer first queries the map every key's
+     * {@code hashCode} is already stable.
+     */
+    @Test
+    public void testMapWithKeyCacheObjectAndMessageValue() {
+        Compilation compilation = compile("TestMapKeyCacheObjectMessage.java");
+
+        assertThat(compilation).succeeded();
+
+        assertThat(compilation)
+            .generatedSourceFile("org.apache.ignite.internal.TestMapKeyCacheObjectMessageSerializer")
+            .hasSourceEquivalentTo(javaFile("TestMapKeyCacheObjectMessageSerializer.java"));
+    }
+
+    /**
      * Negative test that verifies the compilation failed if the Compress annotation is used for unsupported types.
      */
     @Test

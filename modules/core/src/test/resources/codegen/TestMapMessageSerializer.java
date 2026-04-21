@@ -17,7 +17,12 @@
 
 package org.apache.ignite.internal;
 
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.TestMapMessage;
+import org.apache.ignite.internal.direct.stream.PendingMap;
+import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersionSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionType;
 import org.apache.ignite.plugin.extensions.communication.MessageItemType;
@@ -32,6 +37,8 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
  * @see org.apache.ignite.internal.MessageProcessor
  */
 public class TestMapMessageSerializer implements MessageSerializer<TestMapMessage> {
+    /** */
+    private final static GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
     /** */
     private final static MessageMapType affTopVersionIgniteUuidMapCollDesc = new MessageMapType(new MessageItemType(MessageCollectionItemType.AFFINITY_TOPOLOGY_VERSION), new MessageItemType(MessageCollectionItemType.IGNITE_UUID), false);
     /** */
@@ -452,5 +459,21 @@ public class TestMapMessageSerializer implements MessageSerializer<TestMapMessag
         }
 
         return true;
+    }
+
+    /** */
+    @Override public void prepareMarshalCacheObjects(TestMapMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
+        if (msg.messageBoxedDoubleMap != null) {
+            for (GridCacheVersion k : PendingMap.keysOf(msg.messageBoxedDoubleMap))
+                GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(k, ctx);
+        }
+    }
+
+    /** */
+    @Override public void finishUnmarshalCacheObjects(TestMapMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
+        if (msg.messageBoxedDoubleMap != null) {
+            for (GridCacheVersion k : PendingMap.keysOf(msg.messageBoxedDoubleMap))
+                GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(k, ctx, ldr);
+        }
     }
 }

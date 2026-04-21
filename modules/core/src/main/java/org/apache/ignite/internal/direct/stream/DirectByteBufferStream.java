@@ -293,8 +293,14 @@ public class DirectByteBufferStream {
     /** */
     private Collection<Object> col;
 
-    /** */
-    private Map<Object, Object> map;
+    /**
+     * Staging buffer built on the NIO thread by {@link #readMap}. Deferred assembly — the real
+     * {@link java.util.HashMap} / {@link java.util.LinkedHashMap} is constructed on the user thread when the
+     * consumer first accesses the map (or explicitly via {@link PendingMap#materialize()}). This avoids calling
+     * {@code hashCode()} on keys whose hash is not yet stable (for example {@code KeyCacheObject} before
+     * {@code finishUnmarshal} has run).
+     */
+    private PendingMap<Object, Object> pendingMap;
 
     /** */
     private long prim;
@@ -1693,8 +1699,8 @@ public class DirectByteBufferStream {
         }
 
         if (readSize >= 0) {
-            if (map == null)
-                map = type.linked() ? U.newLinkedHashMap(readSize) : U.newHashMap(readSize);
+            if (pendingMap == null)
+                pendingMap = new PendingMap<>(readSize, type.linked());
 
             for (int i = readItems; i < readSize; i++) {
                 if (!keyDone) {
@@ -1712,7 +1718,7 @@ public class DirectByteBufferStream {
                 if (!lastFinished)
                     return null;
 
-                map.put(mapCur, val);
+                pendingMap.addRaw(mapCur, val);
 
                 keyDone = false;
 
@@ -1724,9 +1730,9 @@ public class DirectByteBufferStream {
         readItems = 0;
         mapCur = null;
 
-        M map0 = (M)map;
+        M map0 = (M)pendingMap;
 
-        map = null;
+        pendingMap = null;
 
         return map0;
     }
