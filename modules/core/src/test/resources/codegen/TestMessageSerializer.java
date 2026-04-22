@@ -280,8 +280,10 @@ public class TestMessageSerializer implements MessageSerializer<TestMessage> {
         if (msg.ver != null)
             GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(msg.ver, ctx);
         if (msg.verArr != null) {
-            for (GridCacheVersion e : msg.verArr)
-                GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(e, ctx);
+            for (GridCacheVersion e : msg.verArr) {
+                if (e != null)
+                    GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(e, ctx);
+            }
         }
         if (msg.keyCacheObject != null)
             msg.keyCacheObject.prepareMarshal(ctx);
@@ -294,8 +296,10 @@ public class TestMessageSerializer implements MessageSerializer<TestMessage> {
         if (msg.ver != null)
             GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(msg.ver, ctx, ldr);
         if (msg.verArr != null) {
-            for (GridCacheVersion e : msg.verArr)
-                GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
+            for (GridCacheVersion e : msg.verArr) {
+                if (e != null)
+                    GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
+            }
         }
         if (msg.keyCacheObject != null)
             msg.keyCacheObject.finishUnmarshal(ctx, ldr);

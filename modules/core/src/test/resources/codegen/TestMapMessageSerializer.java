@@ -464,16 +464,20 @@ public class TestMapMessageSerializer implements MessageSerializer<TestMapMessag
     /** */
     @Override public void prepareMarshalCacheObjects(TestMapMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         if (msg.messageBoxedDoubleMap != null) {
-            for (GridCacheVersion k : PendingMap.keysOf(msg.messageBoxedDoubleMap))
-                GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(k, ctx);
+            for (GridCacheVersion k : PendingMap.keysOf(msg.messageBoxedDoubleMap)) {
+                if (k != null)
+                    GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(k, ctx);
+            }
         }
     }
 
     /** */
     @Override public void finishUnmarshalCacheObjects(TestMapMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
         if (msg.messageBoxedDoubleMap != null) {
-            for (GridCacheVersion k : PendingMap.keysOf(msg.messageBoxedDoubleMap))
-                GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(k, ctx, ldr);
+            for (GridCacheVersion k : PendingMap.keysOf(msg.messageBoxedDoubleMap)) {
+                if (k != null)
+                    GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(k, ctx, ldr);
+            }
         }
     }
 }

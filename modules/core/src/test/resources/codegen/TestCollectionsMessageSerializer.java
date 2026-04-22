@@ -462,16 +462,20 @@ public class TestCollectionsMessageSerializer implements MessageSerializer<TestC
     /** */
     @Override public void prepareMarshalCacheObjects(TestCollectionsMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         if (msg.messageList != null) {
-            for (GridCacheVersion e : msg.messageList)
-                GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(e, ctx);
+            for (GridCacheVersion e : msg.messageList) {
+                if (e != null)
+                    GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(e, ctx);
+            }
         }
     }
 
     /** */
     @Override public void finishUnmarshalCacheObjects(TestCollectionsMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
         if (msg.messageList != null) {
-            for (GridCacheVersion e : msg.messageList)
-                GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
+            for (GridCacheVersion e : msg.messageList) {
+                if (e != null)
+                    GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
+            }
         }
     }
 }

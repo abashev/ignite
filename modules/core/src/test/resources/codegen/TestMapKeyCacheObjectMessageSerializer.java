@@ -80,20 +80,28 @@ public class TestMapKeyCacheObjectMessageSerializer implements MessageSerializer
     /** */
     @Override public void prepareMarshalCacheObjects(TestMapKeyCacheObjectMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         if (msg.entries != null) {
-            for (KeyCacheObject k : PendingMap.keysOf(msg.entries))
-                k.prepareMarshal(ctx);
-            for (GridCacheVersion v : PendingMap.valuesOf(msg.entries))
-                GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(v, ctx);
+            for (KeyCacheObject k : PendingMap.keysOf(msg.entries)) {
+                if (k != null)
+                    k.prepareMarshal(ctx);
+            }
+            for (GridCacheVersion v : PendingMap.valuesOf(msg.entries)) {
+                if (v != null)
+                    GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(v, ctx);
+            }
         }
     }
 
     /** */
     @Override public void finishUnmarshalCacheObjects(TestMapKeyCacheObjectMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
         if (msg.entries != null) {
-            for (KeyCacheObject k : PendingMap.keysOf(msg.entries))
-                k.finishUnmarshal(ctx, ldr);
-            for (GridCacheVersion v : PendingMap.valuesOf(msg.entries))
-                GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(v, ctx, ldr);
+            for (KeyCacheObject k : PendingMap.keysOf(msg.entries)) {
+                if (k != null)
+                    k.finishUnmarshal(ctx, ldr);
+            }
+            for (GridCacheVersion v : PendingMap.valuesOf(msg.entries)) {
+                if (v != null)
+                    GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(v, ctx, ldr);
+            }
         }
     }
 }

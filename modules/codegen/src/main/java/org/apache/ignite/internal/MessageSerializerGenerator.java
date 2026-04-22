@@ -588,13 +588,19 @@ public class MessageSerializerGenerator {
             String simple = elementType.substring(elementType.lastIndexOf('.') + 1);
             String mtd = prepare ? "prepareMarshal(ctx)" : "finishUnmarshal(ctx, ldr)";
 
-            code.add(identedLine("for (%s %s : %s(%s))", simple, var, helper, accessor));
+            code.add(identedLine("for (%s %s : %s(%s)) {", simple, var, helper, accessor));
+
+            indent++;
+
+            code.add(identedLine("if (%s != null)", var));
 
             indent++;
 
             code.add(identedLine("%s.%s;", var, mtd));
 
-            indent--;
+            indent -= 2;
+
+            code.add(identedLine("}"));
         }
         else {
             assert sideKind == FieldKind.MSG : sideKind;
@@ -607,13 +613,19 @@ public class MessageSerializerGenerator {
 
             String call = prepare ? "prepareMarshalCacheObjects(%s, ctx)" : "finishUnmarshalCacheObjects(%s, ctx, ldr)";
 
-            code.add(identedLine("for (%s %s : %s(%s))", elemSimple, var, helper, accessor));
+            code.add(identedLine("for (%s %s : %s(%s)) {", elemSimple, var, helper, accessor));
+
+            indent++;
+
+            code.add(identedLine("if (%s != null)", var));
 
             indent++;
 
             code.add(identedLine("%s." + call + ";", serRef, var));
 
-            indent--;
+            indent -= 2;
+
+            code.add(identedLine("}"));
         }
     }
 
@@ -649,13 +661,21 @@ public class MessageSerializerGenerator {
 
         indent++;
 
-        code.add(identedLine("for (%s obj : %s)", simple, accessor));
+        code.add(identedLine("for (%s obj : %s) {", simple, accessor));
+
+        indent++;
+
+        code.add(identedLine("if (obj != null)"));
 
         indent++;
 
         code.add(identedLine("obj.%s;", mtd));
 
         indent -= 2;
+
+        code.add(identedLine("}"));
+
+        indent--;
 
         code.add(identedLine("}"));
     }
@@ -689,13 +709,21 @@ public class MessageSerializerGenerator {
 
         indent++;
 
-        code.add(identedLine("for (%s e : %s)", elemSimple, accessor));
+        code.add(identedLine("for (%s e : %s) {", elemSimple, accessor));
+
+        indent++;
+
+        code.add(identedLine("if (e != null)"));
 
         indent++;
 
         code.add(identedLine("%s.%s;", serRef, call));
 
         indent -= 2;
+
+        code.add(identedLine("}"));
+
+        indent--;
 
         code.add(identedLine("}"));
     }

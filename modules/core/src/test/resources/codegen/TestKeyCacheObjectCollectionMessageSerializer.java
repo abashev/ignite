@@ -78,16 +78,20 @@ public class TestKeyCacheObjectCollectionMessageSerializer implements MessageSer
     /** */
     @Override public void prepareMarshalCacheObjects(TestKeyCacheObjectCollectionMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         if (msg.entries != null) {
-            for (KeyCacheObjectEntryMsg e : msg.entries)
-                KEY_CACHE_OBJECT_ENTRY_MSG_SER.prepareMarshalCacheObjects(e, ctx);
+            for (KeyCacheObjectEntryMsg e : msg.entries) {
+                if (e != null)
+                    KEY_CACHE_OBJECT_ENTRY_MSG_SER.prepareMarshalCacheObjects(e, ctx);
+            }
         }
     }
 
     /** */
     @Override public void finishUnmarshalCacheObjects(TestKeyCacheObjectCollectionMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
         if (msg.entries != null) {
-            for (KeyCacheObjectEntryMsg e : msg.entries)
-                KEY_CACHE_OBJECT_ENTRY_MSG_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
+            for (KeyCacheObjectEntryMsg e : msg.entries) {
+                if (e != null)
+                    KEY_CACHE_OBJECT_ENTRY_MSG_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
+            }
         }
     }
 }
