@@ -305,14 +305,7 @@ public class MessageProcessorTest {
         assertThat(compilation).hadErrorContaining(errMsg);
     }
 
-    /**
-     * Positive test for the safe replacement of an {@code @Order Map<KeyCacheObject, ?>} field:
-     * a parent {@code Message} transmits a {@code Collection<Entry>}, where {@code Entry} is a small
-     * {@code Message} holding {@code (KeyCacheObject key, Message val)}. The generator must emit recursion into
-     * every entry so that {@code KeyCacheObject#finishUnmarshal} runs on the user thread before application code
-     * reassembles a {@code HashMap} from the collection — the moment at which {@code KeyCacheObject.hashCode}
-     * becomes stable.
-     */
+    /** Collection-of-entries encoding of a {@code Map<KeyCacheObject, ?>}: generator recurses into each entry's KCO. */
     @Test
     public void testKeyCacheObjectInCollectionOfEntries() {
         Compilation compilation = compile("KeyCacheObjectEntryMsg.java", "TestKeyCacheObjectCollectionMessage.java");
@@ -330,15 +323,7 @@ public class MessageProcessorTest {
             .hasSourceEquivalentTo(javaFile("TestKeyCacheObjectCollectionMessageSerializer.java"));
     }
 
-    /**
-     * Positive test for {@code @Order Map<KeyCacheObject, GridCacheVersion>}: the generator emits a standard
-     * {@code writeMap} / {@code readMap} pair and — crucially — a {@code finishUnmarshalCacheObjects} that walks
-     * keys via {@code PendingMap.keysOf} and values via {@code PendingMap.valuesOf}, calling
-     * {@code KeyCacheObject#finishUnmarshal} and the nested {@code GridCacheVersionSerializer} on each element.
-     * The staging {@link org.apache.ignite.internal.direct.stream.PendingMap} defers real {@code HashMap}
-     * assembly to the user thread, so by the time the consumer first queries the map every key's
-     * {@code hashCode} is already stable.
-     */
+    /** {@code @Order Map<KeyCacheObject, GridCacheVersion>}: generator walks keys/values via {@code PendingMap}. */
     @Test
     public void testMapWithKeyCacheObjectAndMessageValue() {
         Compilation compilation = compile("TestMapKeyCacheObjectMessage.java");

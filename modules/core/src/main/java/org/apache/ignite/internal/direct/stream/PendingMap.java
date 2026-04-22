@@ -30,19 +30,10 @@ import java.util.Set;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- * {@link Map} wrapper returned by {@link DirectByteBufferStream#readMap} while a message is being demarshaled
- * on the NIO thread.
- *
- * <p>Instead of assembling a {@link java.util.HashMap} on the NIO thread — which is unsafe when the keys are
- * {@link org.apache.ignite.internal.processors.cache.KeyCacheObject}s whose {@code hashCode()} is only stable
- * once {@link org.apache.ignite.internal.processors.cache.CacheObject#finishUnmarshal} has run — this class
- * accumulates {@code (key, value)} pairs into parallel arrays and defers construction of the real hash map
- * until the first access. That first access happens on the user thread after {@code finishUnmarshal} has been
- * applied to every {@code CacheObject} key/value, so bucket placement is correct.
- *
- * <p>Generated serializer code for an {@code @Order Map<K, V>} field walks the pending contents via
- * {@link #stagedKeys()} / {@link #stagedValues()} so the traversal does not trigger materialization
- * prematurely.
+ * Staging {@link Map} returned by {@link DirectByteBufferStream#readMap}: accumulates pairs in parallel arrays on
+ * the NIO thread and builds the real {@link java.util.HashMap} / {@link java.util.LinkedHashMap} lazily on first
+ * access, so {@code KeyCacheObject} keys get their {@code finishUnmarshal} applied (on the user thread) before any
+ * {@code hashCode()} is invoked.
  */
 public final class PendingMap<K, V> extends AbstractMap<K, V> implements Serializable {
     /** */
@@ -80,9 +71,7 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> implements Seriali
     }
 
     /**
-     * Appends a raw {@code (key, value)} pair to the staging arrays. Does not invoke {@code key.hashCode()} or
-     * {@code key.equals()}, so the method is safe to call on the NIO thread before any CacheObject key has had
-     * {@code finishUnmarshal} applied.
+     * Appends a raw {@code (key, value)} pair without invoking {@code key.hashCode()} or {@code equals()}.
      *
      * @param k Key.
      * @param v Value.
@@ -102,9 +91,7 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> implements Seriali
     }
 
     /**
-     * Builds the real {@link java.util.HashMap} (or {@link java.util.LinkedHashMap}) from the staged entries.
-     * Idempotent. After the first call the staging arrays are discarded and all subsequent {@link Map} accesses
-     * hit the materialized instance.
+     * Builds the real map from the staged entries (idempotent); staging arrays are dropped on the first call.
      *
      * @return The materialized map.
      */
@@ -125,10 +112,8 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> implements Seriali
     }
 
     /**
-     * Iterates staged keys without triggering {@link #materialize()}. Intended for consumption by generated
-     * {@code prepareMarshalCacheObjects} / {@code finishUnmarshalCacheObjects} code that needs to walk
-     * {@link org.apache.ignite.internal.processors.cache.CacheObject} key entries before the hash map is built.
-     * If the map has already been materialized, falls back to iterating the materialized key set.
+     * Iterates staged keys without triggering {@link #materialize()}; falls back to the materialized key set
+     * if already materialized.
      *
      * @return Iterable of staged keys.
      */
@@ -140,8 +125,8 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> implements Seriali
     }
 
     /**
-     * Iterates staged values without triggering {@link #materialize()}. If the map has already been materialized,
-     * falls back to iterating the materialized values collection.
+     * Iterates staged values without triggering {@link #materialize()}; falls back to the materialized values
+     * collection if already materialized.
      *
      * @return Iterable of staged values.
      */
@@ -213,10 +198,8 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> implements Seriali
     }
 
     /**
-     * Serializes as the underlying {@link java.util.HashMap} / {@link java.util.LinkedHashMap}, not as
-     * {@code PendingMap}. {@code PendingMap} is a wire-protocol staging detail — it should not appear in
-     * JDK-serialized forms (cache metadata, discovery data, etc.), where readers may not have the class on
-     * their classpath and where {@link Serializable} semantics are expected to yield a plain map.
+     * JDK-serialization hook: write the real materialized map so {@code PendingMap} (a wire-protocol staging
+     * detail) never appears in serialized form and the reader doesn't need the class on its classpath.
      *
      * @return Materialized map.
      * @throws ObjectStreamException Never.
@@ -226,12 +209,8 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> implements Seriali
     }
 
     /**
-     * Returns an {@link Iterable} over the keys of {@code m} without triggering materialization if {@code m} is a
-     * {@link PendingMap}. For any other {@link Map} implementation delegates to {@link Map#keySet()}.
-     *
-     * <p>Intended to be called from APT-generated {@code prepareMarshalCacheObjects} / {@code
-     * finishUnmarshalCacheObjects}. Generated code does not know at compile time whether the field holds a
-     * pending instance (receive-side) or a real map (send-side); this helper dispatches uniformly.
+     * Iterates keys without triggering materialization if {@code m} is a {@link PendingMap}; delegates to
+     * {@link Map#keySet()} otherwise. Used by generated {@code prepare/finishUnmarshalCacheObjects}.
      *
      * @param m Map.
      * @param <K> Key type.
@@ -246,8 +225,7 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> implements Seriali
     }
 
     /**
-     * Returns an {@link Iterable} over the values of {@code m} without triggering materialization if {@code m} is a
-     * {@link PendingMap}. For any other {@link Map} implementation delegates to {@link Map#values()}.
+     * Values counterpart of {@link #keysOf}.
      *
      * @param m Map.
      * @param <V> Value type.

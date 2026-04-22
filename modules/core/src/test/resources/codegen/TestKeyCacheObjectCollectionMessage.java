@@ -20,16 +20,7 @@ package org.apache.ignite.internal;
 import java.util.Collection;
 import org.apache.ignite.plugin.extensions.communication.Message;
 
-/**
- * Test Message demonstrating the safe replacement for an {@code @Order Map<KeyCacheObject, ?>} field.
- * <p>
- * Instead of a {@code Map}, the wire representation is a {@code Collection<KeyCacheObjectEntryMsg>}. The
- * APT-generated serializer does not assemble any {@code HashMap} on the NIO thread, so the fact that
- * {@code KeyCacheObject.hashCode} is unstable until {@link org.apache.ignite.internal.processors.cache.CacheObject#finishUnmarshal}
- * has run is harmless. The generated {@code finishUnmarshalCacheObjects} walks every entry and calls
- * {@code KeyCacheObject#finishUnmarshal} on the user thread — so by the time the application code reassembles a
- * {@code HashMap<KeyCacheObject, ?>} from {@link #entries}, every key's hashCode is already stable.
- */
+/** APT fixture: collection-of-entries replacement for an {@code @Order Map<KeyCacheObject, ?>} field. */
 public class TestKeyCacheObjectCollectionMessage implements Message {
     @Order(0)
     Collection<KeyCacheObjectEntryMsg> entries;

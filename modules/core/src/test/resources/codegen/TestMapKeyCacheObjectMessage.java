@@ -22,16 +22,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.plugin.extensions.communication.Message;
 
-/**
- * Test Message demonstrating that {@code @Order Map<KeyCacheObject, GridCacheVersion>} is safe to use as-is.
- * <p>
- * The APT-generated {@code readFrom} leaves {@code entries} as a
- * {@link org.apache.ignite.internal.direct.stream.PendingMap} on the NIO thread (no {@code hashCode}
- * invocations on keys). The generated {@code finishUnmarshalCacheObjects} walks the staged keys and values
- * via {@code PendingMap.keysOf} / {@code PendingMap.valuesOf} and calls {@code KeyCacheObject#finishUnmarshal}
- * / the nested {@code GridCacheVersionSerializer#finishUnmarshalCacheObjects} on each — so by the time user
- * code accesses the map and triggers real {@code HashMap} assembly, every key's {@code hashCode} is stable.
- */
+/** APT fixture: {@code @Order Map<KeyCacheObject, GridCacheVersion>} is safe — deferred {@code HashMap} assembly. */
 public class TestMapKeyCacheObjectMessage implements Message {
     @Order(0)
     Map<KeyCacheObject, GridCacheVersion> entries;

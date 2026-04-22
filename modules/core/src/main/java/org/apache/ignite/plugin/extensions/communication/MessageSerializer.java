@@ -41,11 +41,8 @@ public interface MessageSerializer<M extends Message> {
     public boolean readFrom(M msg, MessageReader reader);
 
     /**
-     * Phase 1 of two-phase marshalling (IGNITE-28520): invoked on the <b>user thread</b> before the message is
-     * handed off to the NIO worker. The generated implementation walks {@code @Order}-annotated
-     * {@code CacheObject}/{@code KeyCacheObject} fields (direct, {@code Collection<>}, and array — single level,
-     * no maps, no recursion into nested messages) and calls {@code CacheObject.prepareMarshal} on each, so the NIO
-     * thread never does it. Default is a no-op.
+     * Runs {@code CacheObject.prepareMarshal} for {@code @Order} cache-object fields on the user thread, so the NIO
+     * worker never does it. Default is a no-op.
      *
      * @param msg Message instance.
      * @param ctx Cache object value context.
@@ -56,8 +53,8 @@ public interface MessageSerializer<M extends Message> {
     }
 
     /**
-     * Receive-side mirror of {@link #prepareMarshalCacheObjects}: called on a user (listener-dispatch) thread to
-     * run {@code CacheObject.finishUnmarshal} for the same set of fields. Default is a no-op.
+     * Receive-side mirror of {@link #prepareMarshalCacheObjects}: runs {@code CacheObject.finishUnmarshal} on a user
+     * thread. Default is a no-op.
      *
      * @param msg Message instance.
      * @param ctx Cache object value context.

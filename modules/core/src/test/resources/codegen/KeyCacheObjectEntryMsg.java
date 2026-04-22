@@ -21,11 +21,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.plugin.extensions.communication.Message;
 
-/**
- * Test entry Message used by {@link TestKeyCacheObjectCollectionMessage} to demonstrate the safe substitute for
- * an {@code @Order Map<KeyCacheObject, ?>} field. Each instance represents one logical {@code (key, value)} pair;
- * the parent Message transmits them as a {@code Collection<KeyCacheObjectEntryMsg>}.
- */
+/** APT fixture: entry Message for {@link TestKeyCacheObjectCollectionMessage}. */
 public class KeyCacheObjectEntryMsg implements Message {
     @Order(0)
     KeyCacheObject key;

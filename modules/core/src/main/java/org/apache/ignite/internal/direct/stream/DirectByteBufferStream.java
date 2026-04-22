@@ -293,13 +293,7 @@ public class DirectByteBufferStream {
     /** */
     private Collection<Object> col;
 
-    /**
-     * Staging buffer built on the NIO thread by {@link #readMap}. Deferred assembly — the real
-     * {@link java.util.HashMap} / {@link java.util.LinkedHashMap} is constructed on the user thread when the
-     * consumer first accesses the map (or explicitly via {@link PendingMap#materialize()}). This avoids calling
-     * {@code hashCode()} on keys whose hash is not yet stable (for example {@code KeyCacheObject} before
-     * {@code finishUnmarshal} has run).
-     */
+    /** NIO-thread staging buffer for {@link #readMap}; real map assembly is deferred to the user thread. */
     private PendingMap<Object, Object> pendingMap;
 
     /** */

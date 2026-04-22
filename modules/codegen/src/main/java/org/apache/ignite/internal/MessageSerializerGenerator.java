@@ -321,12 +321,7 @@ public class MessageSerializerGenerator {
         MSG_COLL,
         /** {@code Message[]} with concrete component type. */
         MSG_ARR,
-        /**
-         * {@code Map<K, V>} where at least one of {@code K}, {@code V} is a {@code CacheObject} or a recursable
-         * {@code Message}. Each traversable side is walked via {@link
-         * org.apache.ignite.internal.direct.stream.PendingMap#keysOf(Map)} / {@code valuesOf(Map)} so that
-         * receive-side {@code PendingMap}s are not materialized before the cache-object hook has run.
-         */
+        /** {@code Map<K, V>} with at least one CO/Message side; sides walked via {@code PendingMap.keysOf/valuesOf}. */
         MAP,
         /** Skipped — abstract Message, cross-cache nested Message, Map with no traversable side, unsupported. */
         SKIP
@@ -361,7 +356,6 @@ public class MessageSerializerGenerator {
             FieldKind kSide = classifyMapSide(args.get(0));
             FieldKind vSide = classifyMapSide(args.get(1));
 
-            // No traversable key or value — nothing to do for CacheObject hooks.
             if (kSide == FieldKind.SKIP && vSide == FieldKind.SKIP)
                 return FieldKind.SKIP;
 
@@ -405,12 +399,7 @@ public class MessageSerializerGenerator {
         return assignableFrom(type, type("org.apache.ignite.internal.processors.cache.CacheObject"));
     }
 
-    /**
-     * True if {@code t} is a concrete non-abstract {@code Message} that is safe to recurse into from a parent's
-     * generated serializer: excludes the {@code Message} interface itself, abstract classes, self-reference,
-     * {@code MarshallableMessage} (its generated serializer has a non-default constructor), and nested messages
-     * that own an {@code @Order int cacheId} (cross-cache — their CO ctx must be resolved externally).
-     */
+    /** True if {@code t} is a concrete non-abstract {@code Message} safe to recurse into (no self-ref, no cross-cache). */
     private boolean isRecursableMessage(TypeMirror t) {
         TypeMirror msgIface = type(MESSAGE_INTERFACE);
 
@@ -521,13 +510,7 @@ public class MessageSerializerGenerator {
         }
     }
 
-    /**
-     * Emits traversal code for a {@code Map<K, V>} field. One or both sides may be a {@code CacheObject} or a
-     * recursable {@code Message}; each traversable side is walked independently using {@link
-     * org.apache.ignite.internal.direct.stream.PendingMap#keysOf(Map)} / {@code valuesOf(Map)}. The helper
-     * dispatches between the receive-side {@code PendingMap} (iterates staged entries without materialization)
-     * and the send-side real map (delegates to {@code keySet()} / {@code values()}).
-     */
+    /** Emits traversal for a {@code Map<K, V>} field; walks each traversable side via {@code PendingMap.keysOf/valuesOf}. */
     private void emitMapTraversal(List<String> code, String accessor, DeclaredType mapType, boolean prepare) {
         List<? extends TypeMirror> args = mapType.getTypeArguments();
 
