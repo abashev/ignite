@@ -24,6 +24,7 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.internal.MarshallableMessage;
 import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.communication.ErrorMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -32,7 +33,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
-import org.apache.ignite.plugin.extensions.communication.MarshallableMessage;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -82,7 +82,7 @@ public class GridEventStorageMessage implements MarshallableMessage {
 
     /** Node class loader participants. */
     @GridToStringInclude
-    @Order(value = 8, method = "loaderParticipants")
+    @Order(8)
     Map<UUID, IgniteUuid> ldrParties;
 
     /** */
@@ -192,13 +192,6 @@ public class GridEventStorageMessage implements MarshallableMessage {
     }
 
     /**
-     * @param ldrParties Node class loader participant map.
-     */
-    public void loaderParticipants(@Nullable Map<UUID, IgniteUuid> ldrParties) {
-        this.ldrParties = ldrParties;
-    }
-
-    /**
      * @return Exception.
      */
     @Nullable Throwable exception() {
@@ -244,10 +237,6 @@ public class GridEventStorageMessage implements MarshallableMessage {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public short directType() {
-        return 13;
-    }
 
     /** {@inheritDoc} */
     @Override public String toString() {

@@ -20,15 +20,12 @@ package org.apache.ignite.internal.processors.metastorage.persistence;
 import java.util.UUID;
 import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
-import org.apache.ignite.internal.managers.discovery.DiscoveryMessageFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
 
 /** */
 public class DistributedMetaStorageCasMessage extends DistributedMetaStorageUpdateMessage {
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** TODO: revise the external serialization https://issues.apache.org/jira/browse/IGNITE-28058. */
     @Order(0)
     byte[] expectedVal;
@@ -37,7 +34,7 @@ public class DistributedMetaStorageCasMessage extends DistributedMetaStorageUpda
     @Order(1)
     boolean matches;
 
-    /** Empty constructor for {@link DiscoveryMessageFactory}. */
+    /** Empty constructor for {@link MessageFactory}. */
     public DistributedMetaStorageCasMessage() {
         // No-op.
     }
@@ -68,11 +65,6 @@ public class DistributedMetaStorageCasMessage extends DistributedMetaStorageUpda
     /** {@inheritDoc} */
     @Override @Nullable public DiscoveryCustomMessage ackMessage() {
         return new DistributedMetaStorageCasAckMessage(requestId(), matches);
-    }
-
-    /** {@inheritDoc} */
-    @Override public short directType() {
-        return 26;
     }
 
     /** {@inheritDoc} */

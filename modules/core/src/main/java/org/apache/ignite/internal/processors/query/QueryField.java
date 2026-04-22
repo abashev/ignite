@@ -19,11 +19,11 @@ package org.apache.ignite.internal.processors.query;
 
 import java.io.Serializable;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.MarshallableMessage;
 import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
-import org.apache.ignite.plugin.extensions.communication.MarshallableMessage;
 
 /**
  * Query field metadata.
@@ -185,8 +185,4 @@ public class QueryField implements Serializable, MarshallableMessage {
         return S.toString(QueryField.class, this);
     }
 
-    /** {@inheritDoc} */
-    @Override public short directType() {
-        return -110;
-    }
 }

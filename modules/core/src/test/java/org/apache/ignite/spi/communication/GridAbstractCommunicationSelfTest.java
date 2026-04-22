@@ -25,17 +25,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
-import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.managers.communication.GridIoMessageFactory;
+import org.apache.ignite.internal.CoreMessagesProvider;
 import org.apache.ignite.internal.managers.communication.IgniteMessageFactoryImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.testframework.GridSpiTestContext;
@@ -81,7 +79,7 @@ public abstract class GridAbstractCommunicationSelfTest<T extends CommunicationS
     protected abstract CommunicationListener<Message> createMessageListener(UUID nodeId);
 
     /** */
-    protected abstract Map<Short, Supplier<Message>> customMessageTypes();
+    protected abstract MessageFactoryProvider customMessageFactory();
 
     /** */
     protected boolean isSslEnabled() {
@@ -155,14 +153,8 @@ public abstract class GridAbstractCommunicationSelfTest<T extends CommunicationS
 
             GridSpiTestContext ctx = initSpiContext();
 
-            MessageFactoryProvider testMsgFactory = new MessageFactoryProvider() {
-                @Override public void registerAll(MessageFactory factory) {
-                    customMessageTypes().forEach(factory::register);
-                }
-            };
-
             ctx.messageFactory(new IgniteMessageFactoryImpl(new MessageFactoryProvider[] {
-                new GridIoMessageFactory(jdk(), U.gridClassLoader()), testMsgFactory}));
+                new CoreMessagesProvider(jdk(), U.gridClassLoader()), customMessageFactory()}));
 
             ctx.setLocalNode(node);
 
