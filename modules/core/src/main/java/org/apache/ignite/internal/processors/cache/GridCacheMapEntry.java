@@ -2318,6 +2318,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             boolean deferred;
             GridCacheVersion ver0;
 
+            cctx.shared().database().checkpointReadLock();
+
             lockEntry();
 
             try {
@@ -2351,6 +2353,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
             finally {
                 unlockEntry();
+
+                cctx.shared().database().checkpointReadUnlock();
             }
 
             if (deferred) {
@@ -2395,14 +2399,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             long delta = expireTime - U.currentTimeMillis();
 
             if (delta <= 0) {
-                cctx.shared().database().checkpointReadLock();
-
-                try {
-                    removeValue();
-                }
-                finally {
-                    cctx.shared().database().checkpointReadUnlock();
-                }
+                removeValue();
 
                 return true;
             }
@@ -3542,15 +3539,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     protected void removeValue() throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
 
-        cctx.shared().database().checkpointReadLock();
-
-        try {
-            // Removals are possible from RENTING partition on clearing/evicting.
-            cctx.offheap().remove(cctx, key, partition(), localPartition());
-        }
-        finally {
-            cctx.shared().database().checkpointReadUnlock();
-        }
+        // Removals are possible from RENTING partition on clearing/evicting.
+        cctx.offheap().remove(cctx, key, partition(), localPartition());
     }
 
     /** {@inheritDoc} */
@@ -3805,6 +3795,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         boolean rmv = false;
 
         try {
+            cctx.shared().database().checkpointReadLock();
+
             lockEntry();
 
             try {
@@ -3819,6 +3811,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
             finally {
                 unlockEntry();
+
+                cctx.shared().database().checkpointReadUnlock();
             }
 
             if (filter != CU.empty0() && !cctx.isAll(this, filter))
