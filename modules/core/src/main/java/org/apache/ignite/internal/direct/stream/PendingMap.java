@@ -17,6 +17,8 @@
 
 package org.apache.ignite.internal.direct.stream;
 
+import java.io.ObjectStreamException;
+import java.io.Serializable;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
@@ -42,7 +44,10 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * {@link #stagedKeys()} / {@link #stagedValues()} so the traversal does not trigger materialization
  * prematurely.
  */
-public final class PendingMap<K, V> extends AbstractMap<K, V> {
+public final class PendingMap<K, V> extends AbstractMap<K, V> implements Serializable {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** Minimum capacity of the staging arrays. */
     private static final int MIN_CAP = 4;
 
@@ -205,6 +210,19 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> {
     /** {@inheritDoc} */
     @Override public Collection<V> values() {
         return materialize().values();
+    }
+
+    /**
+     * Serializes as the underlying {@link java.util.HashMap} / {@link java.util.LinkedHashMap}, not as
+     * {@code PendingMap}. {@code PendingMap} is a wire-protocol staging detail — it should not appear in
+     * JDK-serialized forms (cache metadata, discovery data, etc.), where readers may not have the class on
+     * their classpath and where {@link Serializable} semantics are expected to yield a plain map.
+     *
+     * @return Materialized map.
+     * @throws ObjectStreamException Never.
+     */
+    private Object writeReplace() throws ObjectStreamException {
+        return materialize();
     }
 
     /**
