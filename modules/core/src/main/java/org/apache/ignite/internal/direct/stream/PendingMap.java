@@ -55,7 +55,7 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> implements Seriali
     private int size;
 
     /** Materialized view; {@code null} until {@link #materialize()} runs. */
-    private Map<K, V> real;
+    private volatile Map<K, V> real;
 
     /**
      * @param expSize Expected number of entries (hint for initial array capacity).
@@ -97,44 +97,63 @@ public final class PendingMap<K, V> extends AbstractMap<K, V> implements Seriali
      */
     @SuppressWarnings("unchecked")
     public Map<K, V> materialize() {
-        if (real == null) {
-            Map<K, V> m = linked ? U.newLinkedHashMap(size) : U.newHashMap(size);
+        Map<K, V> m = real;
 
-            for (int i = 0; i < size; i++)
-                m.put((K)keys[i], (V)vals[i]);
+        if (m != null)
+            return m;
 
-            real = m;
-            keys = null;
-            vals = null;
+        synchronized (this) {
+            if (real == null) {
+                Map<K, V> tmp = linked ? U.newLinkedHashMap(size) : U.newHashMap(size);
+
+                for (int i = 0; i < size; i++)
+                    tmp.put((K)keys[i], (V)vals[i]);
+
+                real = tmp;
+                keys = null;
+                vals = null;
+            }
+
+            return real;
         }
-
-        return real;
     }
 
     /**
-     * Iterates staged keys without triggering {@link #materialize()}; falls back to the materialized key set
-     * if already materialized.
+     * Iterates staged keys without triggering {@link #materialize()}; falls back to the materialized key set.
      *
      * @return Iterable of staged keys.
      */
     public Iterable<K> stagedKeys() {
-        if (real != null)
-            return real.keySet();
+        Map<K, V> m = real;
 
-        return stagedIterable(keys, size);
+        if (m != null)
+            return m.keySet();
+
+        synchronized (this) {
+            if (real != null)
+                return real.keySet();
+
+            return stagedIterable(keys, size);
+        }
     }
 
     /**
-     * Iterates staged values without triggering {@link #materialize()}; falls back to the materialized values
-     * collection if already materialized.
+     * Iterates staged values without triggering {@link #materialize()}; falls back to the materialized values.
      *
      * @return Iterable of staged values.
      */
     public Iterable<V> stagedValues() {
-        if (real != null)
-            return real.values();
+        Map<K, V> m = real;
 
-        return stagedIterable(vals, size);
+        if (m != null)
+            return m.values();
+
+        synchronized (this) {
+            if (real != null)
+                return real.values();
+
+            return stagedIterable(vals, size);
+        }
     }
 
     /** {@inheritDoc} */
