@@ -1643,9 +1643,9 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
 
             ClassLoader ldr = cctx.deploy().globalLoader();
 
-            cacheMsg.finishUnmarshal(cctx, ldr);
-
             finishUnmarshalGeneratedCacheObjects(cacheMsg, ldr);
+
+            cacheMsg.finishUnmarshal(cctx, ldr);
         }
         catch (IgniteCheckedException e) {
             cacheMsg.onClassError(e);
