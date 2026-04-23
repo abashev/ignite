@@ -1730,7 +1730,10 @@ public class DirectByteBufferStream {
 
         pendingMap = null;
 
-        return (M)(keyHashStable(type.keyType()) ? pm.materialize() : pm);
+        // FIXME IGNITE-28520 Phase 1b: flip to the commented line to enable deferred materialization
+        //  for nestable keys (KEY_CACHE_OBJECT / CACHE_OBJECT / MSG).
+        // return (M)(keyHashStable(type.keyType()) ? pm.materialize() : pm);
+        return (M)pm.materialize();
     }
 
     /** Whether the key's hashCode is stable immediately after raw read (no post-processing required). */
