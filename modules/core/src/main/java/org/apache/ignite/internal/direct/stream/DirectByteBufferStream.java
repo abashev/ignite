@@ -45,8 +45,10 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageArrayType;
+import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionType;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
+import org.apache.ignite.plugin.extensions.communication.MessageItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageMapType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageType;
@@ -1724,11 +1726,23 @@ public class DirectByteBufferStream {
         readItems = 0;
         mapCur = null;
 
-        M map0 = (M)pendingMap;
+        PendingMap<Object, Object> pm = pendingMap;
 
         pendingMap = null;
 
-        return map0;
+        return (M)(keyHashStable(type.keyType()) ? pm.materialize() : pm);
+    }
+
+    /** Whether the key's hashCode is stable immediately after raw read (no post-processing required). */
+    private static boolean keyHashStable(MessageType keyType) {
+        if (!(keyType instanceof MessageItemType))
+            return true;
+
+        MessageCollectionItemType t = keyType.type();
+
+        return t != MessageCollectionItemType.KEY_CACHE_OBJECT
+            && t != MessageCollectionItemType.CACHE_OBJECT
+            && t != MessageCollectionItemType.MSG;
     }
 
     /**
