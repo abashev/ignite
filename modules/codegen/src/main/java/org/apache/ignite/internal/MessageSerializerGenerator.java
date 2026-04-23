@@ -321,7 +321,7 @@ public class MessageSerializerGenerator {
         MSG_COLL,
         /** {@code Message[]} with concrete component type. */
         MSG_ARR,
-        /** {@code Map<K, V>} with at least one CO/Message side; sides walked via {@code PendingMap.keysOf/valuesOf}. */
+        /** {@code Map<K, V>} with at least one CO/Message side. */
         MAP,
         /** Skipped — abstract Message, cross-cache nested Message, Map with no traversable side, unsupported. */
         SKIP
@@ -510,7 +510,7 @@ public class MessageSerializerGenerator {
         }
     }
 
-    /** Emits traversal for a {@code Map<K, V>} field; walks each traversable side via {@code PendingMap.keysOf/valuesOf}. */
+    /** Emits map traversal; read-path walks sides via {@code PendingMap.keysOf/valuesOf}, write-path via plain {@code keySet/values}. */
     private void emitMapTraversal(List<String> code, String accessor, DeclaredType mapType, boolean prepare) {
         List<? extends TypeMirror> args = mapType.getTypeArguments();
 
@@ -520,7 +520,8 @@ public class MessageSerializerGenerator {
         FieldKind kSide = classifyMapSide(keyT);
         FieldKind vSide = classifyMapSide(valT);
 
-        imports.add("org.apache.ignite.internal.direct.stream.PendingMap");
+        if (!prepare)
+            imports.add("org.apache.ignite.internal.direct.stream.PendingMap");
 
         code.add(identedLine("if (%s != null) {", accessor));
 
@@ -538,14 +539,13 @@ public class MessageSerializerGenerator {
     }
 
     /**
-     * Emits an iteration block over keys or values of a Map field, calling the appropriate CacheObject or
-     * nested-Message marshal hook on each element.
+     * Emits an iteration block over keys or values of a Map field.
      *
      * @param code     Target code buffer.
      * @param accessor Field accessor expression (e.g. {@code msg.myMap}).
      * @param sideType Declared type of the map side being traversed (key type or value type).
      * @param sideKind {@link FieldKind#CO} or {@link FieldKind#MSG}.
-     * @param isKey    {@code true} to iterate keys via {@code PendingMap.keysOf}, {@code false} for values.
+     * @param isKey    {@code true} to iterate keys, {@code false} for values.
      * @param prepare  {@code true} for {@code prepareMarshalCacheObjects}, {@code false} for
      *                 {@code finishUnmarshalCacheObjects}.
      */
@@ -557,7 +557,13 @@ public class MessageSerializerGenerator {
         boolean isKey,
         boolean prepare
     ) {
-        String helper = isKey ? "PendingMap.keysOf" : "PendingMap.valuesOf";
+        String side;
+
+        if (prepare)
+            side = accessor + (isKey ? ".keySet()" : ".values()");
+        else
+            side = (isKey ? "PendingMap.keysOf(" : "PendingMap.valuesOf(") + accessor + ")";
+
         String var = isKey ? "k" : "v";
 
         if (sideKind == FieldKind.CO) {
@@ -571,7 +577,7 @@ public class MessageSerializerGenerator {
             String simple = elementType.substring(elementType.lastIndexOf('.') + 1);
             String mtd = prepare ? "prepareMarshal(ctx)" : "finishUnmarshal(ctx, ldr)";
 
-            code.add(identedLine("for (%s %s : %s(%s)) {", simple, var, helper, accessor));
+            code.add(identedLine("for (%s %s : %s) {", simple, var, side));
 
             indent++;
 
@@ -596,7 +602,7 @@ public class MessageSerializerGenerator {
 
             String call = prepare ? "prepareMarshalCacheObjects(%s, ctx)" : "finishUnmarshalCacheObjects(%s, ctx, ldr)";
 
-            code.add(identedLine("for (%s %s : %s(%s)) {", elemSimple, var, helper, accessor));
+            code.add(identedLine("for (%s %s : %s) {", elemSimple, var, side));
 
             indent++;
 

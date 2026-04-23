@@ -464,7 +464,7 @@ public class TestMapMessageSerializer implements MessageSerializer<TestMapMessag
     /** */
     @Override public void prepareMarshalCacheObjects(TestMapMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         if (msg.messageBoxedDoubleMap != null) {
-            for (GridCacheVersion k : PendingMap.keysOf(msg.messageBoxedDoubleMap)) {
+            for (GridCacheVersion k : msg.messageBoxedDoubleMap.keySet()) {
                 if (k != null)
                     GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(k, ctx);
             }

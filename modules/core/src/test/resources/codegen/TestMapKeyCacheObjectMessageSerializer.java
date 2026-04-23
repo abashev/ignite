@@ -80,11 +80,11 @@ public class TestMapKeyCacheObjectMessageSerializer implements MessageSerializer
     /** */
     @Override public void prepareMarshalCacheObjects(TestMapKeyCacheObjectMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         if (msg.entries != null) {
-            for (KeyCacheObject k : PendingMap.keysOf(msg.entries)) {
+            for (KeyCacheObject k : msg.entries.keySet()) {
                 if (k != null)
                     k.prepareMarshal(ctx);
             }
-            for (GridCacheVersion v : PendingMap.valuesOf(msg.entries)) {
+            for (GridCacheVersion v : msg.entries.values()) {
                 if (v != null)
                     GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(v, ctx);
             }
