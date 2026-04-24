@@ -115,11 +115,8 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
 
     /** {@inheritDoc} */
     @Override public void prepareMarshal(CacheObjectValueContext ctx) throws IgniteCheckedException {
-        if (valBytes == null) {
-            assert assertFirstPrepareMarshal();
-
+        if (valBytes == null)
             valBytes = ctx.marshal(val);
-        }
     }
 
     /** {@inheritDoc} */
