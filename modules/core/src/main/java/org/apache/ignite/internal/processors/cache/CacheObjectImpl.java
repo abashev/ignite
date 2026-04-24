@@ -108,8 +108,11 @@ public class CacheObjectImpl extends CacheObjectAdapter {
     @Override public void prepareMarshal(CacheObjectValueContext ctx) throws IgniteCheckedException {
         assert val != null || valBytes != null;
 
-        if (valBytes == null)
+        if (valBytes == null) {
+            assert assertFirstPrepareMarshal();
+
             valBytes = valueBytesFromValue(ctx);
+        }
     }
 
     /** {@inheritDoc} */

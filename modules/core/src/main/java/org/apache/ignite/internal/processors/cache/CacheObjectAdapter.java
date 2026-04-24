@@ -45,6 +45,18 @@ public abstract class CacheObjectAdapter implements CacheObject, Externalizable 
     /** */
     protected byte[] valBytes;
 
+    /** IGNITE-28520: assertion-only guard — flipped by {@link #prepareMarshal(CacheObjectValueContext)} to detect double invocation. */
+    private transient boolean prepareMarshalCalled;
+
+    /** @return {@code true} if asserts are enabled and this is the first prepareMarshal call; always {@code true} otherwise. */
+    protected final boolean assertFirstPrepareMarshal() {
+        assert !prepareMarshalCalled : "prepareMarshal called more than once on " + getClass().getSimpleName();
+
+        prepareMarshalCalled = true;
+
+        return true;
+    }
+
     /**
      * @param ctx Context.
      * @return {@code True} need to copy value returned to user.

@@ -45,10 +45,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageArrayType;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionType;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
-import org.apache.ignite.plugin.extensions.communication.MessageItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageMapType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageType;
@@ -295,8 +293,13 @@ public class DirectByteBufferStream {
     /** */
     private Collection<Object> col;
 
-    /** NIO-thread staging buffer for {@link #readMap}; real map assembly is deferred to the user thread. */
-    private PendingMap<Object, Object> pendingMap;
+    /** */
+    private Map<Object, Object> map;
+
+    // FIXME IGNITE-28520 Phase 1b: switch {@link #readMap} back to the PendingMap-based
+    //  implementation and restore this field.
+    // /** NIO-thread staging buffer for {@link #readMap}; real map assembly is deferred to the user thread. */
+    // private PendingMap<Object, Object> pendingMap;
 
     /** */
     private long prim;
@@ -1695,8 +1698,8 @@ public class DirectByteBufferStream {
         }
 
         if (readSize >= 0) {
-            if (pendingMap == null)
-                pendingMap = new PendingMap<>(readSize, type.linked());
+            if (map == null)
+                map = type.linked() ? U.newLinkedHashMap(readSize) : U.newHashMap(readSize);
 
             for (int i = readItems; i < readSize; i++) {
                 if (!keyDone) {
@@ -1714,7 +1717,7 @@ public class DirectByteBufferStream {
                 if (!lastFinished)
                     return null;
 
-                pendingMap.addRaw(mapCur, val);
+                map.put(mapCur, val);
 
                 keyDone = false;
 
@@ -1726,27 +1729,76 @@ public class DirectByteBufferStream {
         readItems = 0;
         mapCur = null;
 
-        PendingMap<Object, Object> pm = pendingMap;
+        M map0 = (M)map;
 
-        pendingMap = null;
+        map = null;
 
-        // FIXME IGNITE-28520 Phase 1b: flip to the commented line to enable deferred materialization
-        //  for nestable keys (KEY_CACHE_OBJECT / CACHE_OBJECT / MSG).
-        // return (M)(keyHashStable(type.keyType()) ? pm.materialize() : pm);
-        return (M)pm.materialize();
+        return map0;
     }
 
-    /** Whether the key's hashCode is stable immediately after raw read (no post-processing required). */
-    private static boolean keyHashStable(MessageType keyType) {
-        if (!(keyType instanceof MessageItemType))
-            return true;
-
-        MessageCollectionItemType t = keyType.type();
-
-        return t != MessageCollectionItemType.KEY_CACHE_OBJECT
-            && t != MessageCollectionItemType.CACHE_OBJECT
-            && t != MessageCollectionItemType.MSG;
-    }
+    // FIXME IGNITE-28520 Phase 1b: re-enable the deferred PendingMap-based implementation below.
+    //  The dormant variant defers real map assembly (and the KEY_CACHE_OBJECT / CACHE_OBJECT / MSG
+    //  post-processing that would otherwise corrupt hashCodes) off the NIO thread.
+    // public <M extends Map<?, ?>> M readMap(MessageMapType type, MessageReader reader) {
+    //     if (readSize == -1) {
+    //         int size = readInt();
+    //
+    //         if (!lastFinished)
+    //             return null;
+    //
+    //         readSize = size;
+    //     }
+    //
+    //     if (readSize >= 0) {
+    //         if (pendingMap == null)
+    //             pendingMap = new PendingMap<>(readSize, type.linked());
+    //
+    //         for (int i = readItems; i < readSize; i++) {
+    //             if (!keyDone) {
+    //                 Object key = read(type.keyType(), reader);
+    //
+    //                 if (!lastFinished)
+    //                     return null;
+    //
+    //                 mapCur = key;
+    //                 keyDone = true;
+    //             }
+    //
+    //             Object val = read(type.valueType(), reader);
+    //
+    //             if (!lastFinished)
+    //                 return null;
+    //
+    //             pendingMap.addRaw(mapCur, val);
+    //
+    //             keyDone = false;
+    //
+    //             readItems++;
+    //         }
+    //     }
+    //
+    //     readSize = -1;
+    //     readItems = 0;
+    //     mapCur = null;
+    //
+    //     PendingMap<Object, Object> pm = pendingMap;
+    //
+    //     pendingMap = null;
+    //
+    //     return (M)(keyHashStable(type.keyType()) ? pm.materialize() : pm);
+    // }
+    //
+    // /** Whether the key's hashCode is stable immediately after raw read (no post-processing required). */
+    // private static boolean keyHashStable(MessageType keyType) {
+    //     if (!(keyType instanceof MessageItemType))
+    //         return true;
+    //
+    //     MessageCollectionItemType t = keyType.type();
+    //
+    //     return t != MessageCollectionItemType.KEY_CACHE_OBJECT
+    //         && t != MessageCollectionItemType.CACHE_OBJECT
+    //         && t != MessageCollectionItemType.MSG;
+    // }
 
     /**
      * @param arr Array.
