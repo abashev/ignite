@@ -510,7 +510,7 @@ public class MessageSerializerGenerator {
         }
     }
 
-    /** Emits map traversal; read-path walks sides via {@code PendingMap.keysOf/valuesOf}, write-path via plain {@code keySet/values}. */
+    /** Emits map traversal: walks both sides via plain {@code keySet/values}. */
     private void emitMapTraversal(List<String> code, String accessor, DeclaredType mapType, boolean prepare) {
         List<? extends TypeMirror> args = mapType.getTypeArguments();
 
@@ -519,9 +519,6 @@ public class MessageSerializerGenerator {
 
         FieldKind kSide = classifyMapSide(keyT);
         FieldKind vSide = classifyMapSide(valT);
-
-        if (!prepare)
-            imports.add("org.apache.ignite.internal.direct.stream.PendingMap");
 
         code.add(identedLine("if (%s != null) {", accessor));
 
@@ -557,12 +554,7 @@ public class MessageSerializerGenerator {
         boolean isKey,
         boolean prepare
     ) {
-        String side;
-
-        if (prepare)
-            side = accessor + (isKey ? ".keySet()" : ".values()");
-        else
-            side = (isKey ? "PendingMap.keysOf(" : "PendingMap.valuesOf(") + accessor + ")";
+        String side = accessor + (isKey ? ".keySet()" : ".values()");
 
         String var = isKey ? "k" : "v";
 

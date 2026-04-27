@@ -296,11 +296,6 @@ public class DirectByteBufferStream {
     /** */
     private Map<Object, Object> map;
 
-    // FIXME IGNITE-28520 Phase 1b: switch {@link #readMap} back to the PendingMap-based
-    //  implementation and restore this field.
-    // /** NIO-thread staging buffer for {@link #readMap}; real map assembly is deferred to the user thread. */
-    // private PendingMap<Object, Object> pendingMap;
-
     /** */
     private long prim;
 
@@ -1735,70 +1730,6 @@ public class DirectByteBufferStream {
 
         return map0;
     }
-
-    // FIXME IGNITE-28520 Phase 1b: re-enable the deferred PendingMap-based implementation below.
-    //  The dormant variant defers real map assembly (and the KEY_CACHE_OBJECT / CACHE_OBJECT / MSG
-    //  post-processing that would otherwise corrupt hashCodes) off the NIO thread.
-    // public <M extends Map<?, ?>> M readMap(MessageMapType type, MessageReader reader) {
-    //     if (readSize == -1) {
-    //         int size = readInt();
-    //
-    //         if (!lastFinished)
-    //             return null;
-    //
-    //         readSize = size;
-    //     }
-    //
-    //     if (readSize >= 0) {
-    //         if (pendingMap == null)
-    //             pendingMap = new PendingMap<>(readSize, type.linked());
-    //
-    //         for (int i = readItems; i < readSize; i++) {
-    //             if (!keyDone) {
-    //                 Object key = read(type.keyType(), reader);
-    //
-    //                 if (!lastFinished)
-    //                     return null;
-    //
-    //                 mapCur = key;
-    //                 keyDone = true;
-    //             }
-    //
-    //             Object val = read(type.valueType(), reader);
-    //
-    //             if (!lastFinished)
-    //                 return null;
-    //
-    //             pendingMap.addRaw(mapCur, val);
-    //
-    //             keyDone = false;
-    //
-    //             readItems++;
-    //         }
-    //     }
-    //
-    //     readSize = -1;
-    //     readItems = 0;
-    //     mapCur = null;
-    //
-    //     PendingMap<Object, Object> pm = pendingMap;
-    //
-    //     pendingMap = null;
-    //
-    //     return (M)(keyHashStable(type.keyType()) ? pm.materialize() : pm);
-    // }
-    //
-    // /** Whether the key's hashCode is stable immediately after raw read (no post-processing required). */
-    // private static boolean keyHashStable(MessageType keyType) {
-    //     if (!(keyType instanceof MessageItemType))
-    //         return true;
-    //
-    //     MessageCollectionItemType t = keyType.type();
-    //
-    //     return t != MessageCollectionItemType.KEY_CACHE_OBJECT
-    //         && t != MessageCollectionItemType.CACHE_OBJECT
-    //         && t != MessageCollectionItemType.MSG;
-    // }
 
     /**
      * @param arr Array.

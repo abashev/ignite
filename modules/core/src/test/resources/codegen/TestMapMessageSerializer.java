@@ -19,7 +19,6 @@ package org.apache.ignite.internal;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.TestMapMessage;
-import org.apache.ignite.internal.direct.stream.PendingMap;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionSerializer;
@@ -474,7 +473,7 @@ public class TestMapMessageSerializer implements MessageSerializer<TestMapMessag
     /** */
     @Override public void finishUnmarshalCacheObjects(TestMapMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
         if (msg.messageBoxedDoubleMap != null) {
-            for (GridCacheVersion k : PendingMap.keysOf(msg.messageBoxedDoubleMap)) {
+            for (GridCacheVersion k : msg.messageBoxedDoubleMap.keySet()) {
                 if (k != null)
                     GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(k, ctx, ldr);
             }
