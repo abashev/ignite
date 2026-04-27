@@ -1177,23 +1177,6 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
             ser.prepareMarshalCacheObjects(msg, cacheObjCtx);
     }
 
-    /** Receive-side mirror of {@link #prepareMarshalGeneratedCacheObjects}. */
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private void finishUnmarshalGeneratedCacheObjects(GridCacheMessage msg, ClassLoader ldr) throws IgniteCheckedException {
-        if (!(msg instanceof GridCacheIdMessage))
-            return;
-
-        CacheObjectContext cacheObjCtx = cctx.cacheObjectContext(((GridCacheIdMessage)msg).cacheId());
-
-        if (cacheObjCtx == null)
-            return;
-
-        MessageSerializer ser = cctx.gridIO().messageFactory().serializer(msg.directType());
-
-        if (ser != null)
-            ser.finishUnmarshalCacheObjects(msg, cacheObjCtx, ldr);
-    }
-
     /**
      * @param nodeId Node ID.
      * @param sndErr Send error.
@@ -1641,11 +1624,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     log.debug("Set P2P context [senderId=" + nodeId + ", msg=" + cacheMsg + ']');
             }
 
-            ClassLoader ldr = cctx.deploy().globalLoader();
-
-            finishUnmarshalGeneratedCacheObjects(cacheMsg, ldr);
-
-            cacheMsg.finishUnmarshal(cctx, ldr);
+            cacheMsg.finishUnmarshal(cctx, cctx.deploy().globalLoader());
         }
         catch (IgniteCheckedException e) {
             cacheMsg.onClassError(e);

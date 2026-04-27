@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.MutableEntry;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.Order;
 import org.apache.ignite.internal.managers.communication.ErrorMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -123,6 +124,18 @@ public class CacheInvokeDirectResult implements Message {
         finally {
             unprepareRes = null;
         }
+    }
+
+    /**
+     * @param ctx Cache context.
+     * @param ldr Class loader.
+     * @throws IgniteCheckedException If failed.
+     */
+    public void finishUnmarshal(GridCacheContext<?, ?> ctx, ClassLoader ldr) throws IgniteCheckedException {
+        key.finishUnmarshal(ctx.cacheObjectContext(), ldr);
+
+        if (res != null)
+            res.finishUnmarshal(ctx.cacheObjectContext(), ldr);
     }
 
 

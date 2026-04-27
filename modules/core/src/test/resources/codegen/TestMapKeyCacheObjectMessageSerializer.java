@@ -30,14 +30,14 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-/**
+/** 
  * This class is generated automatically.
  *
  * @see org.apache.ignite.internal.MessageProcessor
  */
 public class TestMapKeyCacheObjectMessageSerializer implements MessageSerializer<TestMapKeyCacheObjectMessage> {
     /** */
-    private final static GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
+    private static final GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
     /** */
     private static final MessageMapType entriesCollDesc = new MessageMapType(new MessageItemType(MessageCollectionItemType.KEY_CACHE_OBJECT), new MessageItemType(MessageCollectionItemType.MSG), false);
 

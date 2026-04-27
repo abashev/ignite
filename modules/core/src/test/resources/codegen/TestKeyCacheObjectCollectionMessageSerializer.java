@@ -29,16 +29,16 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-/**
+/** 
  * This class is generated automatically.
  *
  * @see org.apache.ignite.internal.MessageProcessor
  */
 public class TestKeyCacheObjectCollectionMessageSerializer implements MessageSerializer<TestKeyCacheObjectCollectionMessage> {
     /** */
-    private final static KeyCacheObjectEntryMsgSerializer KEY_CACHE_OBJECT_ENTRY_MSG_SER = new KeyCacheObjectEntryMsgSerializer();
+    private static final KeyCacheObjectEntryMsgSerializer KEY_CACHE_OBJECT_ENTRY_MSG_SER = new KeyCacheObjectEntryMsgSerializer();
     /** */
-    private final static MessageCollectionType entriesCollDesc = new MessageCollectionType(new MessageItemType(MessageCollectionItemType.MSG), false);
+    private static final MessageCollectionType entriesCollDesc = new MessageCollectionType(new MessageItemType(MessageCollectionItemType.MSG), false);
 
     /** */
     @Override public boolean writeTo(TestKeyCacheObjectCollectionMessage msg, MessageWriter writer) {

@@ -357,20 +357,20 @@ public class GridCacheReturn implements Message {
      * @param ctx Cache context.
      * @param ldr Class loader.
      * @throws IgniteCheckedException If failed.
-     *
-     * FIXME IGNITE-28520 Phase 2: drop the {@link #SER} delegation once the communication layer calls
-     * {@link GridCacheReturnSerializer#finishUnmarshalCacheObjects} automatically on the user thread.
-     * The post-traversal binary unwrapping below stays here (it is not part of the serializer contract).
      */
     public void finishUnmarshal(GridCacheContext ctx, ClassLoader ldr) throws IgniteCheckedException {
         loc = true;
 
-        SER.finishUnmarshalCacheObjects(this, ctx.cacheObjectContext(), ldr);
+        if (cacheObj != null) {
+            cacheObj.finishUnmarshal(ctx.cacheObjectContext(), ldr);
 
-        if (cacheObj != null)
             v = ctx.cacheObjectContext().unwrapBinaryIfNeeded(cacheObj, true, false, ldr);
+        }
 
         if (invokeRes && invokeResCol != null) {
+            for (CacheInvokeDirectResult res : invokeResCol)
+                res.finishUnmarshal(ctx, ldr);
+
             Map<Object, CacheInvokeResult> map0 = U.newHashMap(invokeResCol.size());
 
             for (CacheInvokeDirectResult res : invokeResCol) {

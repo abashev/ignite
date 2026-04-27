@@ -25,7 +25,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.apache.ignite.plugin.extensions.communication.mappers.EnumMapper;
 import org.apache.ignite.transactions.TransactionIsolation;
 
-/**
+/** 
  * This class is generated automatically.
  *
  * @see org.apache.ignite.internal.MessageProcessor
