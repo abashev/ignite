@@ -30,14 +30,14 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-/** 
+/**
  * This class is generated automatically.
  *
  * @see org.apache.ignite.internal.MessageProcessor
  */
 public class TestMapMessageSerializer implements MessageSerializer<TestMapMessage> {
     /** */
-    private static final GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
+    private final static GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
     /** */
     private static final MessageMapType affTopVersionIgniteUuidMapCollDesc = new MessageMapType(new MessageItemType(MessageCollectionItemType.AFFINITY_TOPOLOGY_VERSION), new MessageItemType(MessageCollectionItemType.IGNITE_UUID), false);
     /** */
@@ -466,16 +466,6 @@ public class TestMapMessageSerializer implements MessageSerializer<TestMapMessag
             for (GridCacheVersion k : msg.messageBoxedDoubleMap.keySet()) {
                 if (k != null)
                     GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(k, ctx);
-            }
-        }
-    }
-
-    /** */
-    @Override public void finishUnmarshalCacheObjects(TestMapMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
-        if (msg.messageBoxedDoubleMap != null) {
-            for (GridCacheVersion k : msg.messageBoxedDoubleMap.keySet()) {
-                if (k != null)
-                    GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(k, ctx, ldr);
             }
         }
     }

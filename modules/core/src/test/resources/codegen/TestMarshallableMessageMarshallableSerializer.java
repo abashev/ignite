@@ -25,7 +25,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-/** 
+/**
  * This class is generated automatically.
  *
  * @see org.apache.ignite.internal.MessageProcessor

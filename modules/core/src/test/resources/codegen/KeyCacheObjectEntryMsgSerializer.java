@@ -25,14 +25,14 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-/** 
+/**
  * This class is generated automatically.
  *
  * @see org.apache.ignite.internal.MessageProcessor
  */
 public class KeyCacheObjectEntryMsgSerializer implements MessageSerializer<KeyCacheObjectEntryMsg> {
     /** */
-    private static final GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
+    private final static GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
 
     /** */
     @Override public boolean writeTo(KeyCacheObjectEntryMsg msg, MessageWriter writer) {
@@ -87,15 +87,8 @@ public class KeyCacheObjectEntryMsgSerializer implements MessageSerializer<KeyCa
     @Override public void prepareMarshalCacheObjects(KeyCacheObjectEntryMsg msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         if (msg.key != null)
             msg.key.prepareMarshal(ctx);
+
         if (msg.val != null)
             GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(msg.val, ctx);
-    }
-
-    /** */
-    @Override public void finishUnmarshalCacheObjects(KeyCacheObjectEntryMsg msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
-        if (msg.key != null)
-            msg.key.finishUnmarshal(ctx, ldr);
-        if (msg.val != null)
-            GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(msg.val, ctx, ldr);
     }
 }

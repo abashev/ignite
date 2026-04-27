@@ -1160,7 +1160,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         return true;
     }
 
-    /** IGNITE-28520 Phase 1: invokes the generated per-field {@code CacheObject.prepareMarshal} on the user thread. */
+    /** */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void prepareMarshalGeneratedCacheObjects(GridCacheMessage msg) throws IgniteCheckedException {
         if (!(msg instanceof GridCacheIdMessage))

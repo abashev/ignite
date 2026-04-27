@@ -29,14 +29,14 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-/** 
+/**
  * This class is generated automatically.
  *
  * @see org.apache.ignite.internal.MessageProcessor
  */
 public class TestCollectionsMessageSerializer implements MessageSerializer<TestCollectionsMessage> {
     /** */
-    private static final GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
+    private final static GridCacheVersionSerializer GRID_CACHE_VERSION_SER = new GridCacheVersionSerializer();
     /** */
     private static final MessageCollectionType affTopVersionListCollDesc = new MessageCollectionType(new MessageItemType(MessageCollectionItemType.AFFINITY_TOPOLOGY_VERSION), false);
     /** */
@@ -465,16 +465,6 @@ public class TestCollectionsMessageSerializer implements MessageSerializer<TestC
             for (GridCacheVersion e : msg.messageList) {
                 if (e != null)
                     GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(e, ctx);
-            }
-        }
-    }
-
-    /** */
-    @Override public void finishUnmarshalCacheObjects(TestCollectionsMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
-        if (msg.messageList != null) {
-            for (GridCacheVersion e : msg.messageList) {
-                if (e != null)
-                    GRID_CACHE_VERSION_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
             }
         }
     }

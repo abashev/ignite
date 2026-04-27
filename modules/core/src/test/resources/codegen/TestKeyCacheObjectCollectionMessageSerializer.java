@@ -29,14 +29,14 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-/** 
+/**
  * This class is generated automatically.
  *
  * @see org.apache.ignite.internal.MessageProcessor
  */
 public class TestKeyCacheObjectCollectionMessageSerializer implements MessageSerializer<TestKeyCacheObjectCollectionMessage> {
     /** */
-    private static final KeyCacheObjectEntryMsgSerializer KEY_CACHE_OBJECT_ENTRY_MSG_SER = new KeyCacheObjectEntryMsgSerializer();
+    private final static KeyCacheObjectEntryMsgSerializer KEY_CACHE_OBJECT_ENTRY_MSG_SER = new KeyCacheObjectEntryMsgSerializer();
     /** */
     private static final MessageCollectionType entriesCollDesc = new MessageCollectionType(new MessageItemType(MessageCollectionItemType.MSG), false);
 
@@ -81,16 +81,6 @@ public class TestKeyCacheObjectCollectionMessageSerializer implements MessageSer
             for (KeyCacheObjectEntryMsg e : msg.entries) {
                 if (e != null)
                     KEY_CACHE_OBJECT_ENTRY_MSG_SER.prepareMarshalCacheObjects(e, ctx);
-            }
-        }
-    }
-
-    /** */
-    @Override public void finishUnmarshalCacheObjects(TestKeyCacheObjectCollectionMessage msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
-        if (msg.entries != null) {
-            for (KeyCacheObjectEntryMsg e : msg.entries) {
-                if (e != null)
-                    KEY_CACHE_OBJECT_ENTRY_MSG_SER.finishUnmarshalCacheObjects(e, ctx, ldr);
             }
         }
     }

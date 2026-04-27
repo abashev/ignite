@@ -51,18 +51,4 @@ public interface MessageSerializer<M extends Message> {
     public default void prepareMarshalCacheObjects(M msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
         // No-op by default.
     }
-
-    /**
-     * Receive-side mirror of {@link #prepareMarshalCacheObjects}: runs {@code CacheObject.finishUnmarshal} on a user
-     * thread. Default is a no-op.
-     *
-     * @param msg Message instance.
-     * @param ctx Cache object value context.
-     * @param ldr Class loader used to resolve unmarshalled classes.
-     * @throws IgniteCheckedException If unmarshalling fails.
-     */
-    public default void finishUnmarshalCacheObjects(M msg, CacheObjectValueContext ctx, ClassLoader ldr)
-        throws IgniteCheckedException {
-        // No-op by default.
-    }
 }

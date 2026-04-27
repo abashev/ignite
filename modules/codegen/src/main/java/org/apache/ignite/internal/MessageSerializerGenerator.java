@@ -75,7 +75,7 @@ public class MessageSerializerGenerator {
     public static final String NL = System.lineSeparator();
 
     /** */
-    private static final String CLS_JAVADOC = "/** " + NL +
+    private static final String CLS_JAVADOC = "/**" + NL +
         " * This class is generated automatically." + NL +
         " *" + NL +
         " * @see org.apache.ignite.internal.MessageProcessor" + NL +
@@ -117,9 +117,6 @@ public class MessageSerializerGenerator {
 
     /** */
     private final List<String> prepareCacheObjects = new ArrayList<>();
-
-    /** */
-    private final List<String> finishCacheObjects = new ArrayList<>();
 
     /** Map of {@code <nested-serializer-static-var-name, serializer-FQN>} for recursion into nested messages. */
     private final LinkedHashMap<String, String> nestedSerializerFields = new LinkedHashMap<>();
@@ -204,16 +201,9 @@ public class MessageSerializerGenerator {
 
                 for (String p: prepareCacheObjects)
                     writer.write(p + NL);
-
-                writer.write(NL);
-
-                for (String f: finishCacheObjects)
-                    writer.write(f + NL);
             }
 
             writer.write("}");
-
-            writer.write(NL);
 
             return writer.toString();
         }
@@ -268,7 +258,7 @@ public class MessageSerializerGenerator {
         generateCacheObjectMethods(fields);
     }
 
-    /** IGNITE-28520 Phase 1: emits per-field CacheObject marshal hooks with recursion into nested {@code Message} types. */
+    /** */
     private void generateCacheObjectMethods(List<VariableElement> orderedFields) throws Exception {
         List<VariableElement> traversable = new ArrayList<>();
 
@@ -283,20 +273,24 @@ public class MessageSerializerGenerator {
         imports.add("org.apache.ignite.IgniteCheckedException");
         imports.add("org.apache.ignite.internal.processors.cache.CacheObjectValueContext");
 
-        startCacheObjectMethod(prepareCacheObjects, true);
-        startCacheObjectMethod(finishCacheObjects, false);
+        startCacheObjectMethod(prepareCacheObjects);
 
         indent++;
 
+        boolean first = true;
+
         for (VariableElement field: traversable) {
-            emitCacheObjectCall(prepareCacheObjects, field, true);
-            emitCacheObjectCall(finishCacheObjects, field, false);
+            if (!first)
+                prepareCacheObjects.add(EMPTY);
+
+            emitCacheObjectCall(prepareCacheObjects, field);
+
+            first = false;
         }
 
         indent--;
 
         prepareCacheObjects.add(identedLine("}"));
-        finishCacheObjects.add(identedLine("}"));
 
         for (Map.Entry<String, String> e : nestedSerializerFields.entrySet()) {
             imports.add(e.getValue());
@@ -456,53 +450,46 @@ public class MessageSerializerGenerator {
     }
 
     /** */
-    private void startCacheObjectMethod(List<String> code, boolean prepare) {
+    private void startCacheObjectMethod(List<String> code) {
         indent = 1;
 
         code.add(identedLine(METHOD_JAVADOC));
 
-        if (prepare) {
-            code.add(identedLine(
-                "@Override public void prepareMarshalCacheObjects(" + type.getSimpleName() +
-                    " msg, CacheObjectValueContext ctx) throws IgniteCheckedException {"));
-        }
-        else {
-            code.add(identedLine(
-                "@Override public void finishUnmarshalCacheObjects(" + type.getSimpleName() +
-                    " msg, CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {"));
-        }
+        code.add(identedLine(
+            "@Override public void prepareMarshalCacheObjects(" + type.getSimpleName() +
+                " msg, CacheObjectValueContext ctx) throws IgniteCheckedException {"));
     }
 
     /** */
-    private void emitCacheObjectCall(List<String> code, VariableElement field, boolean prepare) {
+    private void emitCacheObjectCall(List<String> code, VariableElement field) {
         String accessor = fieldAccessor(field);
         TypeMirror t = field.asType();
         FieldKind kind = classify(t);
 
         switch (kind) {
             case CO:
-                emitCoDirect(code, accessor, prepare);
+                emitCoDirect(code, accessor);
                 break;
 
             case CO_COLL:
             case CO_ARR:
-                emitCoIterable(code, accessor, t, kind == FieldKind.CO_ARR, prepare);
+                emitCoIterable(code, accessor, t, kind == FieldKind.CO_ARR);
                 break;
 
             case MSG:
-                emitMsgDirect(code, accessor, (DeclaredType)t, prepare);
+                emitMsgDirect(code, accessor, (DeclaredType)t);
                 break;
 
             case MSG_COLL:
-                emitMsgIterable(code, accessor, (DeclaredType)((DeclaredType)t).getTypeArguments().get(0), prepare);
+                emitMsgIterable(code, accessor, (DeclaredType)((DeclaredType)t).getTypeArguments().get(0));
                 break;
 
             case MSG_ARR:
-                emitMsgIterable(code, accessor, (DeclaredType)((ArrayType)t).getComponentType(), prepare);
+                emitMsgIterable(code, accessor, (DeclaredType)((ArrayType)t).getComponentType());
                 break;
 
             case MAP:
-                emitMapTraversal(code, accessor, (DeclaredType)t, prepare);
+                emitMapTraversal(code, accessor, (DeclaredType)t);
                 break;
 
             default:
@@ -510,8 +497,8 @@ public class MessageSerializerGenerator {
         }
     }
 
-    /** Emits map traversal: walks both sides via plain {@code keySet/values}. */
-    private void emitMapTraversal(List<String> code, String accessor, DeclaredType mapType, boolean prepare) {
+    /** */
+    private void emitMapTraversal(List<String> code, String accessor, DeclaredType mapType) {
         List<? extends TypeMirror> args = mapType.getTypeArguments();
 
         TypeMirror keyT = args.get(0);
@@ -525,34 +512,26 @@ public class MessageSerializerGenerator {
         indent++;
 
         if (kSide != FieldKind.SKIP)
-            emitMapSideIteration(code, accessor, keyT, kSide, true, prepare);
+            emitMapSideIteration(code, accessor, keyT, kSide, true);
+
+        if (kSide != FieldKind.SKIP && vSide != FieldKind.SKIP)
+            code.add(EMPTY);
 
         if (vSide != FieldKind.SKIP)
-            emitMapSideIteration(code, accessor, valT, vSide, false, prepare);
+            emitMapSideIteration(code, accessor, valT, vSide, false);
 
         indent--;
 
         code.add(identedLine("}"));
     }
 
-    /**
-     * Emits an iteration block over keys or values of a Map field.
-     *
-     * @param code     Target code buffer.
-     * @param accessor Field accessor expression (e.g. {@code msg.myMap}).
-     * @param sideType Declared type of the map side being traversed (key type or value type).
-     * @param sideKind {@link FieldKind#CO} or {@link FieldKind#MSG}.
-     * @param isKey    {@code true} to iterate keys, {@code false} for values.
-     * @param prepare  {@code true} for {@code prepareMarshalCacheObjects}, {@code false} for
-     *                 {@code finishUnmarshalCacheObjects}.
-     */
+    /** */
     private void emitMapSideIteration(
         List<String> code,
         String accessor,
         TypeMirror sideType,
         FieldKind sideKind,
-        boolean isKey,
-        boolean prepare
+        boolean isKey
     ) {
         String side = accessor + (isKey ? ".keySet()" : ".values()");
 
@@ -567,7 +546,6 @@ public class MessageSerializerGenerator {
             imports.add(elementType);
 
             String simple = elementType.substring(elementType.lastIndexOf('.') + 1);
-            String mtd = prepare ? "prepareMarshal(ctx)" : "finishUnmarshal(ctx, ldr)";
 
             code.add(identedLine("for (%s %s : %s) {", simple, var, side));
 
@@ -577,7 +555,7 @@ public class MessageSerializerGenerator {
 
             indent++;
 
-            code.add(identedLine("%s.%s;", var, mtd));
+            code.add(identedLine("%s.prepareMarshal(ctx);", var));
 
             indent -= 2;
 
@@ -592,8 +570,6 @@ public class MessageSerializerGenerator {
 
             imports.add(((TypeElement)msgType.asElement()).getQualifiedName().toString());
 
-            String call = prepare ? "prepareMarshalCacheObjects(%s, ctx)" : "finishUnmarshalCacheObjects(%s, ctx, ldr)";
-
             code.add(identedLine("for (%s %s : %s) {", elemSimple, var, side));
 
             indent++;
@@ -602,7 +578,7 @@ public class MessageSerializerGenerator {
 
             indent++;
 
-            code.add(identedLine("%s." + call + ";", serRef, var));
+            code.add(identedLine("%s.prepareMarshalCacheObjects(%s, ctx);", serRef, var));
 
             indent -= 2;
 
@@ -611,22 +587,18 @@ public class MessageSerializerGenerator {
     }
 
     /** */
-    private void emitCoDirect(List<String> code, String accessor, boolean prepare) {
-        String mtd = prepare ? "prepareMarshal(ctx)" : "finishUnmarshal(ctx, ldr)";
-
+    private void emitCoDirect(List<String> code, String accessor) {
         code.add(identedLine("if (%s != null)", accessor));
 
         indent++;
 
-        code.add(identedLine("%s.%s;", accessor, mtd));
+        code.add(identedLine("%s.prepareMarshal(ctx);", accessor));
 
         indent--;
     }
 
     /** */
-    private void emitCoIterable(List<String> code, String accessor, TypeMirror t, boolean isArr, boolean prepare) {
-        String mtd = prepare ? "prepareMarshal(ctx)" : "finishUnmarshal(ctx, ldr)";
-
+    private void emitCoIterable(List<String> code, String accessor, TypeMirror t, boolean isArr) {
         String elementType = "org.apache.ignite.internal.processors.cache.KeyCacheObject";
 
         TypeMirror elem = isArr ? ((ArrayType)t).getComponentType() : ((DeclaredType)t).getTypeArguments().get(0);
@@ -650,7 +622,7 @@ public class MessageSerializerGenerator {
 
         indent++;
 
-        code.add(identedLine("obj.%s;", mtd));
+        code.add(identedLine("obj.prepareMarshal(ctx);"));
 
         indent -= 2;
 
@@ -662,29 +634,25 @@ public class MessageSerializerGenerator {
     }
 
     /** */
-    private void emitMsgDirect(List<String> code, String accessor, DeclaredType msgType, boolean prepare) {
+    private void emitMsgDirect(List<String> code, String accessor, DeclaredType msgType) {
         String serRef = nestedSerializerRef(msgType);
-
-        String call = prepare ? "prepareMarshalCacheObjects(%s, ctx)" : "finishUnmarshalCacheObjects(%s, ctx, ldr)";
 
         code.add(identedLine("if (%s != null)", accessor));
 
         indent++;
 
-        code.add(identedLine("%s." + call + ";", serRef, accessor));
+        code.add(identedLine("%s.prepareMarshalCacheObjects(%s, ctx);", serRef, accessor));
 
         indent--;
     }
 
     /** */
-    private void emitMsgIterable(List<String> code, String accessor, DeclaredType elemType, boolean prepare) {
+    private void emitMsgIterable(List<String> code, String accessor, DeclaredType elemType) {
         String serRef = nestedSerializerRef(elemType);
 
         String elemSimple = ((TypeElement)elemType.asElement()).getSimpleName().toString();
 
         imports.add(((TypeElement)elemType.asElement()).getQualifiedName().toString());
-
-        String call = prepare ? "prepareMarshalCacheObjects(e, ctx)" : "finishUnmarshalCacheObjects(e, ctx, ldr)";
 
         code.add(identedLine("if (%s != null) {", accessor));
 
@@ -698,7 +666,7 @@ public class MessageSerializerGenerator {
 
         indent++;
 
-        code.add(identedLine("%s.%s;", serRef, call));
+        code.add(identedLine("%s.prepareMarshalCacheObjects(e, ctx);", serRef));
 
         indent -= 2;
 
