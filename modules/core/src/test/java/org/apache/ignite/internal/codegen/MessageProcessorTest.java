@@ -358,7 +358,7 @@ public class MessageProcessorTest {
             .hasSourceEquivalentTo(javaFile("TestKeyCacheObjectCollectionMessageSerializer.java"));
     }
 
-    /** {@code @Order Map<KeyCacheObject, GridCacheVersion>}: generator walks keys/values via {@code keySet()/values()}. */
+/** {@code @Order Map<KeyCacheObject, GridCacheVersion>}: generator walks keys/values via {@code keySet()/values()}. */
     @Test
     public void testMapWithKeyCacheObjectAndMessageValue() {
         Compilation compilation = compile("TestMapKeyCacheObjectMessage.java");

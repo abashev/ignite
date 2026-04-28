@@ -22,6 +22,8 @@ import org.apache.ignite.internal.KeyCacheObjectEntryMsg;
 import org.apache.ignite.internal.KeyCacheObjectEntryMsgSerializer;
 import org.apache.ignite.internal.TestKeyCacheObjectCollectionMessage;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.plugin.extensions.communication.MessageArrayType;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionType;
 import org.apache.ignite.plugin.extensions.communication.MessageItemType;
@@ -37,6 +39,8 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 public class TestKeyCacheObjectCollectionMessageSerializer implements MessageSerializer<TestKeyCacheObjectCollectionMessage> {
     /** */
     private final static KeyCacheObjectEntryMsgSerializer KEY_CACHE_OBJECT_ENTRY_MSG_SER = new KeyCacheObjectEntryMsgSerializer();
+    /** */
+    private static final MessageArrayType entriesArrCollDesc = new MessageArrayType(new MessageItemType(MessageCollectionItemType.MSG), KeyCacheObjectEntryMsg.class);
     /** */
     private static final MessageCollectionType entriesCollDesc = new MessageCollectionType(new MessageItemType(MessageCollectionItemType.MSG), false);
 
@@ -55,6 +59,12 @@ public class TestKeyCacheObjectCollectionMessageSerializer implements MessageSer
                     return false;
 
                 writer.incrementState();
+
+            case 1:
+                if (!writer.writeObjectArray(msg.entriesArr, entriesArrCollDesc))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -70,17 +80,32 @@ public class TestKeyCacheObjectCollectionMessageSerializer implements MessageSer
                     return false;
 
                 reader.incrementState();
+
+            case 1:
+                msg.entriesArr = reader.readObjectArray(entriesArrCollDesc);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return true;
     }
 
     /** */
-    @Override public void prepareMarshalCacheObjects(TestKeyCacheObjectCollectionMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
+    @Override public void prepareMarshalCacheObjects(TestKeyCacheObjectCollectionMessage msg, CacheObjectValueContext ctx, GridCacheSharedContext sharedCtx) throws IgniteCheckedException {
         if (msg.entries != null) {
             for (KeyCacheObjectEntryMsg e : msg.entries) {
                 if (e != null)
-                    KEY_CACHE_OBJECT_ENTRY_MSG_SER.prepareMarshalCacheObjects(e, ctx);
+                    KEY_CACHE_OBJECT_ENTRY_MSG_SER.prepareMarshalCacheObjects(e, ctx, sharedCtx);
+            }
+        }
+
+        if (msg.entriesArr != null) {
+            for (KeyCacheObjectEntryMsg e : msg.entriesArr) {
+                if (e != null)
+                    KEY_CACHE_OBJECT_ENTRY_MSG_SER.prepareMarshalCacheObjects(e, ctx, sharedCtx);
             }
         }
     }

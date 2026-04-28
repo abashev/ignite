@@ -20,6 +20,7 @@ package org.apache.ignite.internal;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.KeyCacheObjectEntryMsg;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageSerializer;
@@ -84,11 +85,11 @@ public class KeyCacheObjectEntryMsgSerializer implements MessageSerializer<KeyCa
     }
 
     /** */
-    @Override public void prepareMarshalCacheObjects(KeyCacheObjectEntryMsg msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
+    @Override public void prepareMarshalCacheObjects(KeyCacheObjectEntryMsg msg, CacheObjectValueContext ctx, GridCacheSharedContext sharedCtx) throws IgniteCheckedException {
         if (msg.key != null)
             msg.key.prepareMarshal(ctx);
 
         if (msg.val != null)
-            GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(msg.val, ctx);
+            GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(msg.val, ctx, sharedCtx);
     }
 }

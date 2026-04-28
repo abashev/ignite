@@ -25,6 +25,9 @@ public class TestKeyCacheObjectCollectionMessage implements Message {
     @Order(0)
     Collection<KeyCacheObjectEntryMsg> entries;
 
+    @Order(1)
+    KeyCacheObjectEntryMsg[] entriesArr;
+
     public short directType() {
         return 1;
     }

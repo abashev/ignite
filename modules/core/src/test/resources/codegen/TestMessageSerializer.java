@@ -20,6 +20,7 @@ package org.apache.ignite.internal;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.TestMessage;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionSerializer;
 import org.apache.ignite.plugin.extensions.communication.MessageArrayType;
@@ -276,14 +277,14 @@ public class TestMessageSerializer implements MessageSerializer<TestMessage> {
     }
 
     /** */
-    @Override public void prepareMarshalCacheObjects(TestMessage msg, CacheObjectValueContext ctx) throws IgniteCheckedException {
+    @Override public void prepareMarshalCacheObjects(TestMessage msg, CacheObjectValueContext ctx, GridCacheSharedContext sharedCtx) throws IgniteCheckedException {
         if (msg.ver != null)
-            GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(msg.ver, ctx);
+            GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(msg.ver, ctx, sharedCtx);
 
         if (msg.verArr != null) {
             for (GridCacheVersion e : msg.verArr) {
                 if (e != null)
-                    GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(e, ctx);
+                    GRID_CACHE_VERSION_SER.prepareMarshalCacheObjects(e, ctx, sharedCtx);
             }
         }
 

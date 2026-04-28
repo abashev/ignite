@@ -272,6 +272,7 @@ public class MessageSerializerGenerator {
 
         imports.add("org.apache.ignite.IgniteCheckedException");
         imports.add("org.apache.ignite.internal.processors.cache.CacheObjectValueContext");
+        imports.add("org.apache.ignite.internal.processors.cache.GridCacheSharedContext");
 
         startCacheObjectMethod(prepareCacheObjects);
 
@@ -393,7 +394,7 @@ public class MessageSerializerGenerator {
         return assignableFrom(type, type("org.apache.ignite.internal.processors.cache.CacheObject"));
     }
 
-    /** True if {@code t} is a concrete non-abstract {@code Message} safe to recurse into (no self-ref, no cross-cache). */
+    /** True if {@code t} is a concrete non-abstract {@code Message} safe to recurse into (no self-ref). */
     private boolean isRecursableMessage(TypeMirror t) {
         TypeMirror msgIface = type(MESSAGE_INTERFACE);
 
@@ -416,37 +417,12 @@ public class MessageSerializerGenerator {
         if (te.getModifiers().contains(Modifier.ABSTRACT))
             return false;
 
-        if (te.equals(type))
-            return false;
-
-        return !hasOwnCacheIdOrder(te);
+        return !te.equals(type);
     }
 
-    /** True if {@code te} declares an {@code @Order}-annotated {@code int cacheId} field (anywhere in its hierarchy). */
-    private boolean hasOwnCacheIdOrder(TypeElement te) {
-        for (TypeElement cur = te; cur != null; ) {
-            for (Element enc : cur.getEnclosedElements()) {
-                if (enc.getKind() != ElementKind.FIELD)
-                    continue;
-
-                if (enc.getAnnotation(Order.class) == null)
-                    continue;
-
-                if (!"cacheId".contentEquals(enc.getSimpleName()))
-                    continue;
-
-                TypeMirror ft = enc.asType();
-
-                if (ft.getKind() == TypeKind.INT)
-                    return true;
-            }
-
-            Element sup = env.getTypeUtils().asElement(cur.getSuperclass());
-
-            cur = sup instanceof TypeElement ? (TypeElement)sup : null;
-        }
-
-        return false;
+    /** True if {@code te} extends {@code GridCacheIdMessage} and therefore carries its own per-cache {@code cacheId()}. */
+    private boolean isCacheIdMessage(TypeElement te) {
+        return assignableFrom(te.asType(), type("org.apache.ignite.internal.processors.cache.GridCacheIdMessage"));
     }
 
     /** */
@@ -457,7 +433,7 @@ public class MessageSerializerGenerator {
 
         code.add(identedLine(
             "@Override public void prepareMarshalCacheObjects(" + type.getSimpleName() +
-                " msg, CacheObjectValueContext ctx) throws IgniteCheckedException {"));
+                " msg, CacheObjectValueContext ctx, GridCacheSharedContext sharedCtx) throws IgniteCheckedException {"));
     }
 
     /** */
@@ -566,7 +542,8 @@ public class MessageSerializerGenerator {
 
             DeclaredType msgType = (DeclaredType)sideType;
             String serRef = nestedSerializerRef(msgType);
-            String elemSimple = ((TypeElement)msgType.asElement()).getSimpleName().toString();
+            boolean cacheIdAware = isCacheIdMessage((TypeElement)msgType.asElement());
+            String elemSimple = msgType.asElement().getSimpleName().toString();
 
             imports.add(((TypeElement)msgType.asElement()).getQualifiedName().toString());
 
@@ -574,13 +551,35 @@ public class MessageSerializerGenerator {
 
             indent++;
 
-            code.add(identedLine("if (%s != null)", var));
+            if (cacheIdAware) {
+                // Resolve per-element cacheId-aware ctx via sharedCtx. Skip if cache is not registered.
+                code.add(identedLine("if (%s != null) {", var));
 
-            indent++;
+                indent++;
 
-            code.add(identedLine("%s.prepareMarshalCacheObjects(%s, ctx);", serRef, var));
+                code.add(identedLine("var nestedCtx = sharedCtx.cacheObjectContext(%s.cacheId());", var));
 
-            indent -= 2;
+                code.add(identedLine("if (nestedCtx != null)"));
+
+                indent++;
+
+                code.add(identedLine("%s.prepareMarshalCacheObjects(%s, nestedCtx, sharedCtx);", serRef, var));
+
+                indent -= 2;
+
+                code.add(identedLine("}"));
+            }
+            else {
+                code.add(identedLine("if (%s != null)", var));
+
+                indent++;
+
+                code.add(identedLine("%s.prepareMarshalCacheObjects(%s, ctx, sharedCtx);", serRef, var));
+
+                indent--;
+            }
+
+            indent--;
 
             code.add(identedLine("}"));
         }
@@ -636,21 +635,43 @@ public class MessageSerializerGenerator {
     /** */
     private void emitMsgDirect(List<String> code, String accessor, DeclaredType msgType) {
         String serRef = nestedSerializerRef(msgType);
+        boolean cacheIdAware = isCacheIdMessage((TypeElement)msgType.asElement());
 
-        code.add(identedLine("if (%s != null)", accessor));
+        if (cacheIdAware) {
+            // Resolve nested cacheId-aware ctx via sharedCtx. Skip if cache is not registered for the cacheId.
+            code.add(identedLine("if (%s != null) {", accessor));
 
-        indent++;
+            indent++;
 
-        code.add(identedLine("%s.prepareMarshalCacheObjects(%s, ctx);", serRef, accessor));
+            code.add(identedLine("var nestedCtx = sharedCtx.cacheObjectContext(%s.cacheId());", accessor));
 
-        indent--;
+            code.add(identedLine("if (nestedCtx != null)"));
+
+            indent++;
+
+            code.add(identedLine("%s.prepareMarshalCacheObjects(%s, nestedCtx, sharedCtx);", serRef, accessor));
+
+            indent -= 2;
+
+            code.add(identedLine("}"));
+        }
+        else {
+            code.add(identedLine("if (%s != null)", accessor));
+
+            indent++;
+
+            code.add(identedLine("%s.prepareMarshalCacheObjects(%s, ctx, sharedCtx);", serRef, accessor));
+
+            indent--;
+        }
     }
 
     /** */
     private void emitMsgIterable(List<String> code, String accessor, DeclaredType elemType) {
         String serRef = nestedSerializerRef(elemType);
+        boolean cacheIdAware = isCacheIdMessage((TypeElement)elemType.asElement());
 
-        String elemSimple = ((TypeElement)elemType.asElement()).getSimpleName().toString();
+        String elemSimple = elemType.asElement().getSimpleName().toString();
 
         imports.add(((TypeElement)elemType.asElement()).getQualifiedName().toString());
 
@@ -662,13 +683,35 @@ public class MessageSerializerGenerator {
 
         indent++;
 
-        code.add(identedLine("if (e != null)"));
+        if (cacheIdAware) {
+            // Resolve per-element cacheId-aware ctx via sharedCtx. Skip if cache is not registered.
+            code.add(identedLine("if (e != null) {"));
 
-        indent++;
+            indent++;
 
-        code.add(identedLine("%s.prepareMarshalCacheObjects(e, ctx);", serRef));
+            code.add(identedLine("var nestedCtx = sharedCtx.cacheObjectContext(e.cacheId());"));
 
-        indent -= 2;
+            code.add(identedLine("if (nestedCtx != null)"));
+
+            indent++;
+
+            code.add(identedLine("%s.prepareMarshalCacheObjects(e, nestedCtx, sharedCtx);", serRef));
+
+            indent -= 2;
+
+            code.add(identedLine("}"));
+        }
+        else {
+            code.add(identedLine("if (e != null)"));
+
+            indent++;
+
+            code.add(identedLine("%s.prepareMarshalCacheObjects(e, ctx, sharedCtx);", serRef));
+
+            indent--;
+        }
+
+        indent--;
 
         code.add(identedLine("}"));
 

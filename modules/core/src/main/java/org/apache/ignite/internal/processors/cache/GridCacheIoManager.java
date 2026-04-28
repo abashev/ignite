@@ -1174,7 +1174,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         MessageSerializer ser = cctx.gridIO().messageFactory().serializer(msg.directType());
 
         if (ser != null)
-            ser.prepareMarshalCacheObjects(msg, cacheObjCtx);
+            ser.prepareMarshalCacheObjects(msg, cacheObjCtx, cctx);
     }
 
     /**
